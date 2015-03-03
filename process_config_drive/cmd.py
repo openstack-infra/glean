@@ -15,7 +15,9 @@
 
 import argparse
 import json
+import os
 import platform
+import subprocess
 import sys
 
 post_up = "    post-up route add -net {net} netmask {mask} gw {gw} || true\n"
@@ -104,7 +106,7 @@ def write_dns_info(dns_servers):
     return {'/etc/resolv.conf': results}
 
 
-def write_network_info(net, args):
+def write_static_network_info(net, args):
 
     dns_servers = [
         f['address'] for f in net['services'] if f['type'] == 'dns'
@@ -125,6 +127,48 @@ def write_network_info(net, args):
     elif distro in ('redhat', 'centos', 'fedora', 'suse', 'opensuse'):
         files_to_write = write_redhat_interfaces(interfaces)
     files_to_write.update(write_dns_info(dns_servers))
+    finish_files(files_to_write, args)
+
+
+def write_debian_dhcp_interfaces(interfaces):
+    output =  """auto lo
+iface lo inet loopback
+"""
+    for interface in interfaces:
+        output += """auto {interface}
+iface {interface} inet dhcp
+""".format(interface=interface)
+    return {'/etc/network/interfaces': output}
+
+
+def write_redhat_dhcp_interfaces(interfaces):
+    files_to_write={}
+    for interface in interfaces:
+        content = """DEVICE={interface}
+BOOTPROTO=dhcp
+ONBOOT=on
+""".format(interface=interface)
+        files_to_write[
+            '/etc/sysconfig/network-scripts/ifcfg-{interface}'.format(
+                interface=interface)]=content
+    return files_to_write
+
+
+def write_dhcp_network_info(args):
+
+    interfaces = get_interfaces()
+    distro = args.distro
+    if not distro:
+        distro = platform.dist()[0].lower()
+    if distro in ('debian', 'ubuntu'):
+        files_to_write = write_debian_dhcp_interfaces(interfaces)
+    elif distro in ('redhat', 'centos', 'fedora', 'suse', 'opensuse'):
+        files_to_write = write_redhat_dhcp_interfaces(interfaces)
+
+    finish_files(files_to_write, args)
+
+
+def finish_files(files_to_write, args):
     for k, v in files_to_write.items():
         if args.noop:
             print("### Write {0}".format(k))
@@ -134,14 +178,30 @@ def write_network_info(net, args):
                 outfile.write(v)
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Static network config")
-    parser.add_argument(
-        '-n', '--noop', action='store_true', help='Do not write files')
-    parser.add_argument(
-        '--distro', dest='distro', default=None,
-        help='Override detected distro')
-    args = parser.parse_args()
+def get_interfaces():
+    interfaces=[]
+    interface_string = subprocess.check_output(shlex.split('ip link show'))
+    for line in [f for f in ifaces.split('\n') if not g.startswith(' ')]:
+        if not line:
+            continue
+        interface = line.split(':')[1].strip()
+        if interface.startswith('eth'):
+            interfaces.append(interface)
+    return interfaces
+
+
+def write_network_info_from_config_drive(args):
+    """Write network info from config-drive.
+
+    If there is no meta_data.json in config-drive, it means that there
+    is no config drive mounted- which means we know nothing.
+
+    Returns False on any issue, which will cause the writing of
+    DHCP network files.
+    """
+
+    if not os.path.exists('/mnt/config/openstack/latest/meta_data.json'):
+        return False
 
     meta_data = json.load(open('/mnt/config/openstack/latest/meta_data.json'))
     with open('/root/.ssh/authorized_keys', 'a') as keys:
@@ -153,7 +213,23 @@ def main():
 
     v = json.load(open('/mnt/config/openstack/latest/vendor_data.json'))
     if 'network_info' in v:
-        write_network_info(v['network_info'], args)
+        write_static_network_info(v['network_info'], args)
+    else:
+        return False
+    return True
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Static network config")
+    parser.add_argument(
+        '-n', '--noop', action='store_true', help='Do not write files')
+    parser.add_argument(
+        '--distro', dest='distro', default=None,
+        help='Override detected distro')
+    args = parser.parse_args()
+
+    if not write_network_info_from_config_drive(args):
+        write_dhcp_network_info(args)
 
 
 if __name__ == '__main__':
