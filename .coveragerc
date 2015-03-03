@@ -1,0 +1,7 @@
+[run]
+branch = True
+source = process-config-drive
+omit = process-config-drive/tests/*,process-config-drive/openstack/*
+
+[report]
+ignore-errors = True
