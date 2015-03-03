@@ -19,10 +19,10 @@ test_process-config-drive
 Tests for `process-config-drive` module.
 """
 
-from process-config-drive.tests import base
+from process_config_drive.tests import base
 
 
-class TestProcess-config-drive(base.TestCase):
+class TestProcessConfigDrive(base.TestCase):
 
     def test_something(self):
         pass
