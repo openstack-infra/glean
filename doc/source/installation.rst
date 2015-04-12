@@ -4,9 +4,9 @@ Installation
 
 At the command line::
 
-    $ pip install process-config-drive
+    $ pip install gleam
 
 Or, if you have virtualenvwrapper installed::
 
-    $ mkvirtualenv process-config-drive
-    $ pip install process-config-drive
+    $ mkvirtualenv gleam
+    $ pip install gleam

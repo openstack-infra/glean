@@ -2,6 +2,6 @@
 Usage
 ========
 
-To use process-config-drive in a project::
+To use gleam in a project::
 
-    import process-config-drive
+    import gleam

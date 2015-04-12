@@ -13,13 +13,13 @@
 # under the License.
 
 """
-test_process-config-drive
+test_gleam
 ----------------------------------
 
-Tests for `process-config-drive` module.
+Tests for `gleam` module.
 """
 
-from process_config_drive.tests import base
+from gleam.tests import base
 
 
 class TestProcessConfigDrive(base.TestCase):
