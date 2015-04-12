@@ -1,0 +1,12 @@
+{
+  "admin_pass": "PBzEwRC8ZgVW",
+  "random_seed": "YPPvhdhxMKysu5EiBaaZpyDv2DIhMkRJp6XscFvCaI1Bvu1CD1mBg0jwURdVN5T0tbhYH74c8WcatRjyocZXMxUQgUeYd1METz3Fh2+aiJa2HRSCLdDcXzE8kD9VadqEAD/rOiUhjMToDepA6VAKzFTYcbnBNKRgshAFHmBfx0TCOtmM7A7CVsKhAfcMcf2ySYQ0PnS2emRrU21/vv/bj//nb2XxHKPrm7tLLDzqHCd+bg5WQsJ5NkDeuILpyHMGnWUyeNs6jg4z47Cq6grG4orM2G58SW3UbzXPs8waqZrYsfpZMMOj8CUqiAO44vptqOpYb3LlcsSRJHoBfVRY+BlTMkKIDwS3vEoSEX97OwMFDx5x4NXziuoZ4UyVzzAbnLeJHPospKcQC7A0JweazmEJpzTjlYyvC/yNFX8Wrwnohg+I22UghsNI/VVtjwzphUACi1nbttSzlkFkajPJjBAE66UHRp2VRCejLAzjT5TuM276rljQFIW73g9TjD3zf9FFfCYLBgie3pkNFXplLCUbLCUUtvUGJOfaN3N9sBO+P3FFAyuF6P9Jo5QKK2uMVLlE9rS3xOF9q4qtHAvXPSX2ikWQEkklz1UVCNHd5p2nT6C71kCBsT6d2/yOLXTLNAWDf8qpw8poVWlhwSj52mGY/uXYB15+PartkUFOoJA=",
+  "uuid": "2615627a-222f-41bb-813b-df92b776ee78",
+  "availability_zone": "nova",
+  "hostname": "test-monty-config-drive",
+  "launch_index": 0,
+  "public_keys": {
+    "mordred": "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDLsTZJ8hXTmzjKxYh/7V07mIy8xl2HL+9BaUlt6A6TMsL3LSvaVQNSgmXX5g0XfPWSCKmkZb1O28q49jQI2n7n7+sHkxn0dJDxj1N2oNrzNY7pDuPrdtCijczLFdievygXNhXNkQ2WIqHXDquN/jfLLJ9L0jxtxtsUMbiL2xxZEZcaf/K5MqyPhscpqiVNE1MjE4xgPbIbv8gCKtPpYIIrktOMb4JbV7rhOp5DcSP5gXtLhOF5fbBpZ+szqrTVUcBX0oTYr3iRfOje9WPsTZIk9vBfBtF416mCNxMSRc7KhSW727AnUu85hS0xiP0MRAf69KemG1OE1pW+LtDIAEYp mordred@camelot\n"
+  },
+  "name": "test-monty-config-drive"
+}

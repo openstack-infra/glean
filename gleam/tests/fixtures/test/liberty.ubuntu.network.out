@@ -1,0 +1,19 @@
+### Write /etc/network/interfaces
+auto eth0
+iface eth0 inet static
+    address 23.253.229.154
+    netmask 255.255.255.0
+    gateway 23.253.229.1
+auto eth1
+iface eth1 inet static
+    address 10.208.169.118
+    netmask 255.255.224.0
+    post-up route add -net 10.176.0.0 netmask 255.240.0.0 gw 10.208.160.1 || true
+    pre-down route del -net 10.176.0.0 netmask 255.240.0.0 gw 10.208.160.1 || true
+    post-up route add -net 10.208.0.0 netmask 255.240.0.0 gw 10.208.160.1 || true
+    pre-down route del -net 10.208.0.0 netmask 255.240.0.0 gw 10.208.160.1 || true
+
+### Write /etc/resolv.conf
+nameserver 72.3.128.241
+nameserver 72.3.128.240
+
