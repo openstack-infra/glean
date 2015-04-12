@@ -16,16 +16,16 @@
 # limitations under the License.
 
 
-SAMPLE_DIR=gleam/tests/fixtures
+SAMPLE_DIR=glean/tests/fixtures
 
 for vendor_dir in $(find $SAMPLE_DIR \
         -maxdepth 1 -mindepth 1 -type d | grep -v test) ; do
     vendor=$(basename $vendor_dir)
-    python gleam/cmd.py \
+    python glean/cmd.py \
         -n --root $vendor_dir --skip-network --ssh \
         > $SAMPLE_DIR/test/$vendor.keys.out
     for distro in debian ubuntu redhat fedora centos ; do
-        python gleam/cmd.py \
+        python glean/cmd.py \
             -n --root $vendor_dir --distro $distro > $SAMPLE_DIR/test/$vendor.$distro.network.out
     done
 done

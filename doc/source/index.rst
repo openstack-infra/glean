@@ -1,9 +1,9 @@
-.. gleam documentation master file, created by
+.. glean documentation master file, created by
    sphinx-quickstart on Tue Jul  9 22:26:36 2013.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to gleam's documentation!
+Welcome to glean's documentation!
 ========================================================
 
 Contents:

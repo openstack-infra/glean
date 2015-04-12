@@ -307,7 +307,7 @@ def write_ssh_keys(args):
         current_keys = ""
         if not args.noop:
             open(authorized_keys, 'w').write(
-                "# File created by gleam\n")
+                "# File created by glean\n")
     for (name, key) in meta_data['public_keys'].items():
         if key not in current_keys or args.noop:
             keys_to_write.append(

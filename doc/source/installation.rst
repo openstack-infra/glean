@@ -4,9 +4,9 @@ Installation
 
 At the command line::
 
-    $ pip install gleam
+    $ pip install glean
 
 Or, if you have virtualenvwrapper installed::
 
-    $ mkvirtualenv gleam
-    $ pip install gleam
+    $ mkvirtualenv glean
+    $ pip install glean

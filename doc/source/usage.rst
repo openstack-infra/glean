@@ -2,6 +2,6 @@
 Usage
 ========
 
-To use gleam in a project::
+To use glean in a project::
 
-    import gleam
+    import glean

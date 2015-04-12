@@ -21,16 +21,16 @@ import mock
 
 from oslotest import base
 
-from gleam import cmd
+from glean import cmd
 
 
 sample_data_path = os.path.join(
     os.path.dirname(os.path.realpath(__file__)), 'fixtures')
 
 
-class TestProcessConfigDrive(base.BaseTestCase):
+class TestGlean(base.BaseTestCase):
     def setUp(self):
-        super(TestProcessConfigDrive, self).setUp()
+        super(TestGlean, self).setUp()
 
     def _patch_argv(self, args):
         self.useFixture(fixtures.MonkeyPatch('sys.argv', ['.'] + args))

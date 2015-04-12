@@ -1,4 +1,4 @@
 [gerrit]
 host=review.openstack.org
 port=29418
-project=openstack-infra/gleam.git
+project=openstack-infra/glean.git
