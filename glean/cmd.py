@@ -235,9 +235,7 @@ def interface_live(iface, sys_root, args):
 
 
 def get_sys_interfaces(interface, args):
-    sys_root = '/sys/class/net'
-    if args.root != '/mnt/config':  # we're in testing land
-        sys_root = args.root + sys_root
+    sys_root = os.path.join(args.root, 'sys/class/net')
 
     sys_interfaces = {}
     if interface is not None:
@@ -265,8 +263,9 @@ def write_network_info_from_config_drive(args):
     DHCP network files.
     """
 
-    network_info_file = '%s/openstack/latest/network_info.json' % args.root
-    vendor_data_file = '%s/openstack/latest/vendor_data.json' % args.root
+    config_drive = os.path.join(args.root, 'mnt/config')
+    network_info_file = '%s/openstack/latest/network_info.json' % config_drive
+    vendor_data_file = '%s/openstack/latest/vendor_data.json' % config_drive
 
     v = {}
     if os.path.exists(network_info_file):
@@ -289,7 +288,8 @@ def write_ssh_keys(args):
     is no config drive mounted- which means we do nothing.
     """
 
-    meta_data_path = '%s/openstack/latest/meta_data.json' % args.root
+    config_drive = os.path.join(args.root, 'mnt/config')
+    meta_data_path = '%s/openstack/latest/meta_data.json' % config_drive
     ssh_path = '%s/root/.ssh' % args.root
     authorized_keys = '%s/authorized_keys' % ssh_path
     if not os.path.exists(meta_data_path):
@@ -300,16 +300,13 @@ def write_ssh_keys(args):
     meta_data = json.load(open(meta_data_path))
 
     keys_to_write = []
-    if os.path.exists(authorized_keys) and not args.noop:
+    if os.path.exists(authorized_keys):
         current_keys = open(authorized_keys, 'r').read()
         keys_to_write.append(current_keys)
     else:
         current_keys = ""
-        if not args.noop:
-            open(authorized_keys, 'w').write(
-                "# File created by glean\n")
     for (name, key) in meta_data['public_keys'].items():
-        if key not in current_keys or args.noop:
+        if key not in current_keys:
             keys_to_write.append(
                 "# Injected key {name} by keypair extension".format(
                     name=name))
@@ -328,8 +325,8 @@ def main():
         '--distro', dest='distro', default=None,
         help='Override detected distro')
     parser.add_argument(
-        '--root', dest='root', default='/mnt/config',
-        help='Mounted root for config drive info, defaults to /mnt/config')
+        '--root', dest='root', default='/',
+        help='Mounted root for config drive info, defaults to /')
     parser.add_argument(
         '-i', '--interface', dest='interface',
         default=None, help="Interface to process")
