@@ -58,7 +58,7 @@ class TestGlean(base.BaseTestCase):
             elif args[0].startswith('/mnt/config'):
                 mock_args = [os.path.join(
                     sample_data_path, sample_prefix,
-                    args[0][len('/mnt/config/'):])]
+                    args[0][1:])]
                 if len(args) > 1:
                     mock_args += args[1:]
                 return std_open(*mock_args, **kwargs)
@@ -87,7 +87,7 @@ class TestGlean(base.BaseTestCase):
             if path.startswith('/mnt/config'):
                 path = os.path.join(
                     sample_data_path, sample_prefix,
-                    path[len('/mnt/config/'):])
+                    path[1:])
             return real_path_exists(path)
 
         self.useFixture(fixtures.MonkeyPatch('os.path.exists',
