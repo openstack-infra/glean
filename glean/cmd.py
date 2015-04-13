@@ -103,7 +103,7 @@ def write_redhat_interfaces(interfaces, sys_interfaces):
 
 
 def write_debian_interfaces(interfaces, sys_interfaces):
-    results = ""
+    results = "auto lo\niface lo inet loopback\n"
     # Sort the interfaces by id so that we'll have consistent output order
     for iname, interface in sorted(
             interfaces.items(), key=lambda x: x[1]['id']):
@@ -198,8 +198,7 @@ def finish_files(files_to_write, args):
             # Don't write empty files
             continue
         if args.noop:
-            print("### Write {0}".format(k))
-            print(files_to_write[k])
+            sys.stdout.write("### Write {0}\n{1}".format(k, files_to_write[k]))
         else:
             with open(k, 'w') as outfile:
                 outfile.write(files_to_write[k])
@@ -312,7 +311,7 @@ def write_ssh_keys(args):
                     name=name))
             keys_to_write.append(key)
     files_to_write = {
-        authorized_keys: '\n'.join(keys_to_write),
+        '/root/.ssh/authorized_keys': '\n'.join(keys_to_write),
     }
     finish_files(files_to_write, args)
 
