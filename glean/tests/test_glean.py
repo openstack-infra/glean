@@ -18,6 +18,7 @@ import os
 import fixtures
 import mock
 from oslotest import base
+from testscenarios import load_tests_apply_scenarios as load_tests  # noqa
 
 from glean import cmd
 
@@ -25,8 +26,21 @@ from glean import cmd
 sample_data_path = os.path.join(
     os.path.dirname(os.path.realpath(__file__)), 'fixtures')
 
+distros = ['Ubuntu', 'Debian', 'Fedora', 'RedHat', 'CentOS']
+styles = ['hp', 'rax', 'liberty', 'nokey']
+
+built_scenarios = []
+for distro in distros:
+    for style in styles:
+        built_scenarios.append(
+            ('%s-%s' % (distro, style),
+             dict(distro=distro, style=style)))
+
 
 class TestGlean(base.BaseTestCase):
+
+    scenarios = built_scenarios
+
     def setUp(self):
         super(TestGlean, self).setUp()
 
@@ -130,32 +144,5 @@ class TestGlean(base.BaseTestCase):
             write_handle = self.file_handle_mocks[dest].write
             write_handle.assert_called_once_with(content)
 
-    def test_centos_hp(self):
-        self._assert_network_output('CentOS', 'hp')
-
-    def test_centos_rax(self):
-        self._assert_network_output('CentOS', 'rax')
-
-    def test_debian_hp(self):
-        self._assert_network_output('Debian', 'hp')
-
-    def test_debian_rax(self):
-        self._assert_network_output('Debian', 'rax')
-
-    def test_fedora_hp(self):
-        self._assert_network_output('Fedora', 'hp')
-
-    def test_fedora_rax(self):
-        self._assert_network_output('Fedora', 'rax')
-
-    def test_redhat_hp(self):
-        self._assert_network_output('RedHat', 'hp')
-
-    def test_redhat_rax(self):
-        self._assert_network_output('RedHat', 'rax')
-
-    def test_ubuntu_hp(self):
-        self._assert_network_output('Ubuntu', 'hp')
-
-    def test_ubuntu_rax(self):
-        self._assert_network_output('Ubuntu', 'rax')
+    def test_glean(self):
+        self._assert_network_output(self.distro, self.style)

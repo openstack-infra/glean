@@ -297,6 +297,8 @@ def write_ssh_keys(args):
         return 0
 
     meta_data = json.load(open(meta_data_path))
+    if 'public_keys' not in meta_data:
+        return 0
 
     keys_to_write = []
     if os.path.exists(authorized_keys):
