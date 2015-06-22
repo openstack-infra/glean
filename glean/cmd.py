@@ -103,7 +103,11 @@ def write_redhat_interfaces(interfaces, sys_interfaces):
 
 
 def write_debian_interfaces(interfaces, sys_interfaces):
-    results = "auto lo\niface lo inet loopback\n"
+    eni_path = '/etc/network/interfaces'
+    eni_d_path = eni_path + '.d'
+    files_to_write = {}
+    files_to_write[eni_path] = "auto lo\niface lo inet loopback\n"
+    files_to_write[eni_path] += "source /etc/network/interfaces.d/*.cfg\n"
     # Sort the interfaces by id so that we'll have consistent output order
     for iname, interface in sorted(
             interfaces.items(), key=lambda x: x[1]['id']):
@@ -114,21 +118,23 @@ def write_debian_interfaces(interfaces, sys_interfaces):
         if interface['type'] == 'ipv6':
             link_type = "inet6"
         interface_name = sys_interfaces[iname]
-        results += "auto {0}\n".format(interface_name)
-        results += "iface {name} {link_type} static\n".format(
+        result = "auto {0}\n".format(interface_name)
+        result += "iface {name} {link_type} static\n".format(
             name=interface_name, link_type=link_type)
-        results += "    address {0}\n".format(interface['ip_address'])
-        results += "    netmask {0}\n".format(interface['netmask'])
+        result += "    address {0}\n".format(interface['ip_address'])
+        result += "    netmask {0}\n".format(interface['netmask'])
         for route in interface['routes']:
             if route['network'] == '0.0.0.0' and route['netmask'] == '0.0.0.0':
-                results += "    gateway {0}\n".format(route['gateway'])
+                result += "    gateway {0}\n".format(route['gateway'])
             else:
-                results += post_up.format(
+                result += post_up.format(
                     net=route['network'], mask=route['netmask'],
                     gw=route['gateway'])
-                results += pre_down.format(
+                result += pre_down.format(
                     net=route['network'], mask=route['netmask'],
                     gw=route['gateway'])
+        iface_path = os.path.join(eni_d_path, '%s.cfg' % interface_name)
+        files_to_write[iface_path] = result
     for mac, iname in sorted(
             sys_interfaces.items(), key=lambda x: x[1]):
         # TODO(mordred) We only want to do this if the interface doesn't
@@ -136,9 +142,10 @@ def write_debian_interfaces(interfaces, sys_interfaces):
         if mac in interfaces:
             # We have a config drive config, move on
             continue
-        results += "auto {0}\n".format(iname)
-        results += "iface {0} inet dhcp\n".format(iname)
-    return {'/etc/network/interfaces': results}
+        result = "auto {0}\n".format(iname)
+        result += "iface {0} inet dhcp\n".format(iname)
+        files_to_write[os.path.join(eni_d_path, "%s.cfg" % iname)] = result
+    return files_to_write
 
 
 def write_dns_info(dns_servers):
