@@ -18,6 +18,7 @@ import argparse
 import json
 import os
 import platform
+import re
 import subprocess
 import sys
 import time
@@ -325,6 +326,42 @@ def write_ssh_keys(args):
     finish_files(files_to_write, args)
 
 
+def set_hostname_from_config_drive(args):
+    if args.noop:
+        return
+
+    config_drive = os.path.join(args.root, 'mnt/config')
+    meta_data_path = '%s/openstack/latest/meta_data.json' % config_drive
+    if not os.path.exists(meta_data_path):
+        return
+
+    meta_data = json.load(open(meta_data_path))
+    if 'name' not in meta_data:
+        return
+
+    hostname = meta_data['name']
+
+    ret = subprocess.call(['hostname', hostname])
+
+    if ret != 0:
+        raise RuntimeError('Error setting hostname')
+    else:
+        with open('/etc/hostname', 'w') as fh:
+            fh.write(hostname)
+            fh.write('\n')
+
+        # See if we already have a hosts entry for hostname
+        prog = re.compile('^127.0.1.1 .*%s' % hostname)
+        match = None
+        with open('/etc/hosts') as fh:
+            match = prog.match(fh.read())
+
+        # Write out a hosts entry for hostname
+        if match is None:
+            with open('/etc/hosts', 'w+') as fh:
+                fh.write('127.0.1.1 %s\n' % hostname)
+
+
 def main():
     parser = argparse.ArgumentParser(description="Static network config")
     parser.add_argument(
@@ -341,11 +378,16 @@ def main():
     parser.add_argument(
         '--ssh', dest='ssh', action='store_true', help="Write ssh key")
     parser.add_argument(
+        '--hostname', dest='hostname', action='store_true',
+        help="Set the hostname if name is available in config drive.")
+    parser.add_argument(
         '--skip-network', dest='skip', action='store_true',
         help="Do not write network info")
     args = parser.parse_args()
     if args.ssh:
         write_ssh_keys(args)
+    if args.hostname:
+        set_hostname_from_config_drive(args)
     if args.interface != 'lo' and not args.skip:
         write_network_info_from_config_drive(args)
     return 0

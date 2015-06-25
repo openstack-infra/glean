@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import os
 
 import fixtures
@@ -54,13 +55,15 @@ class TestGlean(base.BaseTestCase):
         def open_side_effect(*args, **kwargs):
             if (args[0].startswith('/etc/network') or
                     args[0].startswith('/etc/sysconfig/network-scripts') or
-                    args[0].startswith('/etc/resolv.conf')):
+                    args[0].startswith('/etc/resolv.conf') or
+                    args[0] in ('/etc/hostname', '/etc/hosts')):
                 try:
                     mock_handle = self.file_handle_mocks[args[0]]
                 except KeyError:
                     mock_handle = mock.Mock()
                     mock_handle.__enter__ = mock.Mock(return_value=mock_handle)
                     mock_handle.__exit__ = mock.Mock()
+                    mock_handle.read.return_value = ''
                     self.file_handle_mocks[args[0]] = mock_handle
                 return mock_handle
             elif args[0].startswith('/sys/class/net'):
@@ -113,10 +116,14 @@ class TestGlean(base.BaseTestCase):
 
         self.useFixture(fixtures.MonkeyPatch('platform.dist', fake_distro))
 
-    def _assert_network_output(self, distro, provider):
-        self._patch_argv([])
+    def _assert_distro_provider(self, distro, provider):
+        self._patch_argv(['--hostname'])
         self._patch_files(provider)
         self._patch_distro(distro)
+
+        mock_call = mock.Mock()
+        mock_call.return_value = 0
+        self.useFixture(fixtures.MonkeyPatch('subprocess.call', mock_call))
 
         cmd.main()
 
@@ -144,5 +151,21 @@ class TestGlean(base.BaseTestCase):
             write_handle = self.file_handle_mocks[dest].write
             write_handle.assert_called_once_with(content)
 
+        # Check hostname
+        meta_data_path = 'mnt/config/openstack/latest/meta_data.json'
+        hostname = None
+        with open(os.path.join(sample_data_path, provider,
+                               meta_data_path)) as fh:
+            meta_data = json.load(fh)
+            hostname = meta_data['name']
+
+        mock_call.assert_called_once_with(['hostname', hostname])
+        self.file_handle_mocks['/etc/hostname'].write.assert_has_calls(
+            [mock.call(hostname), mock.call('\n')])
+
+        # Check hosts entry
+        self.file_handle_mocks['/etc/hosts'].write.assert_called_once_with(
+            '127.0.1.1 %s\n' % hostname)
+
     def test_glean(self):
-        self._assert_network_output(self.distro, self.style)
+        self._assert_distro_provider(self.distro, self.style)
