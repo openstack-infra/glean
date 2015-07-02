@@ -234,7 +234,7 @@ def interface_live(iface, sys_root, args):
     subprocess.check_call(['ip', 'link', 'set', 'dev', iface, 'up'])
 
     # Poll the interface since it may not come up instantly
-    for x in range(0, 10):
+    for x in range(0, 50):
         if is_interface_live(iface, sys_root):
             return True
         time.sleep(.1)
