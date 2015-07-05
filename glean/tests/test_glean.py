@@ -157,7 +157,7 @@ class TestGlean(base.BaseTestCase):
         with open(os.path.join(sample_data_path, provider,
                                meta_data_path)) as fh:
             meta_data = json.load(fh)
-            hostname = meta_data['name']
+            hostname = meta_data['name'].split('.')[0]
 
         mock_call.assert_called_once_with(['hostname', hostname])
         self.file_handle_mocks['/etc/hostname'].write.assert_has_calls(

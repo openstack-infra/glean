@@ -339,7 +339,7 @@ def set_hostname_from_config_drive(args):
     if 'name' not in meta_data:
         return
 
-    hostname = meta_data['name']
+    hostname = meta_data['name'].split('.')[0]
 
     ret = subprocess.call(['hostname', hostname])
 
