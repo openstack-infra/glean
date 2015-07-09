@@ -353,8 +353,9 @@ def set_hostname_from_config_drive(args):
         # See if we already have a hosts entry for hostname
         prog = re.compile('^127.0.1.1 .*%s' % hostname)
         match = None
-        with open('/etc/hosts') as fh:
-            match = prog.match(fh.read())
+        if os.path.isfile('/etc/hosts'):
+            with open('/etc/hosts') as fh:
+                match = prog.match(fh.read())
 
         # Write out a hosts entry for hostname
         if match is None:
