@@ -97,9 +97,14 @@ def write_redhat_interfaces(interfaces, sys_interfaces):
             continue
         if iname not in sys_interfaces:
             continue
-        interface_name = sys_interfaces[iname]
-        files_to_write.update(
-            _write_rh_interface(interface_name, interface))
+        if interface['type'] == 'ipv4':
+            interface_name = sys_interfaces[iname]
+            files_to_write.update(
+                _write_rh_interface(interface_name, interface))
+        if interface['type'] == 'ipv4_dhcp':
+            interface_name = sys_interfaces[iname]
+            files_to_write.update(
+                _write_rh_dhcp(interface_name, interface['mac_address']))
     for mac, iname in sorted(
             sys_interfaces.items(), key=lambda x: x[1]):
         if _exists_rh_interface(iname):
@@ -129,10 +134,22 @@ def write_debian_interfaces(interfaces, sys_interfaces):
         if iname not in sys_interfaces:
             continue
         interface = interfaces[iname]
-        link_type = "inet"
+        interface_name = sys_interfaces[iname]
+        iface_path = os.path.join(eni_d_path, '%s.cfg' % interface_name)
+
+        if interface['type'] == 'ipv4_dhcp':
+            result = "auto {0}\n".format(interface_name)
+            result += "iface {0} inet dhcp\n".format(interface_name)
+            files_to_write[iface_path] = result
+            continue
         if interface['type'] == 'ipv6':
             link_type = "inet6"
-        interface_name = sys_interfaces[iname]
+        elif interface['type'] == 'ipv4':
+            link_type = "inet"
+        # We do not know this type of entry
+        if not link_type:
+            continue
+
         result = "auto {0}\n".format(interface_name)
         result += "iface {name} {link_type} static\n".format(
             name=interface_name, link_type=link_type)
@@ -148,7 +165,6 @@ def write_debian_interfaces(interfaces, sys_interfaces):
                 result += pre_down.format(
                     net=route['network'], mask=route['netmask'],
                     gw=route['gateway'])
-        iface_path = os.path.join(eni_d_path, '%s.cfg' % interface_name)
         files_to_write[iface_path] = result
     for mac, iname in sorted(
             sys_interfaces.items(), key=lambda x: x[1]):

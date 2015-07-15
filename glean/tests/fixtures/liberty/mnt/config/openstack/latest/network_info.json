@@ -59,7 +59,14 @@
       ],
       "ip_address": "192.0.2.2",
       "id": "network2"
+    },
+    {
+      "network_id": "33333333-3333-3333-3333-333333333333",
+      "type": "ipv4_dhcp",
+      "link": "tap8aac87b9-37",
+      "id": "network3"
     }
+
   ],
   "links": [
     {
@@ -82,6 +89,14 @@
       "type": null,
       "id": "tap234ab34c-f1",
       "vif_id": "acdb875a-87da-76cb-984c-acd9a75dbca7"
+    },
+    {
+      "ethernet_mac_address": "BC:76:4E:12:a4:bb",
+      "mtu": 1500,
+      "type": null,
+      "id": "tap8aac87b9-37",
+      "vif_id": "f12bedfa-87bv-a39f-1234-aaeb55bea7e6"
     }
+
   ]
 }

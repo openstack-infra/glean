@@ -17,6 +17,9 @@ iface eth1 inet static
     pre-down route del -net 10.176.0.0 netmask 255.240.0.0 gw 10.208.160.1 || true
     post-up route add -net 10.208.0.0 netmask 255.240.0.0 gw 10.208.160.1 || true
     pre-down route del -net 10.208.0.0 netmask 255.240.0.0 gw 10.208.160.1 || true
+### Write /etc/network/interfaces.d/eth3.cfg
+auto eth3
+iface eth3 inet dhcp
 ### Write /etc/resolv.conf
 nameserver 72.3.128.241
 nameserver 72.3.128.240

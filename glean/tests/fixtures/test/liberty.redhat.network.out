@@ -21,6 +21,14 @@ IPADDR=10.208.169.118
 NETMASK=255.255.224.0
 ONBOOT=yes
 NM_CONTROLLED=no
+### Write /etc/sysconfig/network-scripts/ifcfg-eth3
+# Automatically generated, do not edit
+DEVICE=eth3
+BOOTPROTO=dhcp
+HWADDR=BC:76:4E:12:a4:bb
+ONBOOT=yes
+NM_CONTROLLED=no
+TYPE=Ethernet
 ### Write /etc/sysconfig/network-scripts/route-eth1
 ADDRESS0=10.176.0.0
 NETMASK0=255.240.0.0
