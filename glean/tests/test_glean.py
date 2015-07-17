@@ -105,6 +105,11 @@ class TestGlean(base.BaseTestCase):
                 path = os.path.join(
                     sample_data_path, sample_prefix,
                     path[1:])
+            if path in ['/etc/sysconfig/network-scripts/ifcfg-eth2',
+                        '/etc/network/interfaces.d/eth2']:
+                # Pretend this file exists, we need to test skipping
+                # pre-existing config files
+                return True
             return real_path_exists(path)
 
         self.useFixture(fixtures.MonkeyPatch('os.path.exists',
@@ -147,6 +152,7 @@ class TestGlean(base.BaseTestCase):
             write_blocks.append((write_dest, write_content))
 
         for dest, content in write_blocks:
+            self.assertNotIn("eth2", dest)
             self.assertIn(dest, self.file_handle_mocks)
             write_handle = self.file_handle_mocks[dest].write
             write_handle.assert_called_once_with(content)

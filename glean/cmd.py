@@ -27,6 +27,13 @@ post_up = "    post-up route add -net {net} netmask {mask} gw {gw} || true\n"
 pre_down = "    pre-down route del -net {net} netmask {mask} gw {gw} || true\n"
 
 
+def _exists_rh_interface(name):
+    file_to_check = '/etc/sysconfig/network-scripts/ifcfg-{name}'.format(
+        name=name
+        )
+    return os.path.exists(file_to_check)
+
+
 def _write_rh_interface(name, interface):
     files_to_write = dict()
     results = """# Automatically generated, do not edit
@@ -95,12 +102,19 @@ def write_redhat_interfaces(interfaces, sys_interfaces):
             _write_rh_interface(interface_name, interface))
     for mac, iname in sorted(
             sys_interfaces.items(), key=lambda x: x[1]):
-        # TODO(mordred) We only want to do this if a file doesn't already exist
+        if _exists_rh_interface(iname):
+            # This interface already has a config file, move on
+            continue
         if mac in interfaces:
             # We have a config drive config, move on
             continue
         files_to_write.update(_write_rh_dhcp(iname, mac))
     return files_to_write
+
+
+def _exists_debian_interface(name):
+    file_to_check = '/etc/network/interfaces.d/{name}'.format(name=name)
+    return os.path.exists(file_to_check)
 
 
 def write_debian_interfaces(interfaces, sys_interfaces):
@@ -138,8 +152,9 @@ def write_debian_interfaces(interfaces, sys_interfaces):
         files_to_write[iface_path] = result
     for mac, iname in sorted(
             sys_interfaces.items(), key=lambda x: x[1]):
-        # TODO(mordred) We only want to do this if the interface doesn't
-        # already exist
+        if _exists_debian_interface(iname):
+            # This interface already has a config file, move on
+            continue
         if mac in interfaces:
             # We have a config drive config, move on
             continue

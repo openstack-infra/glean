@@ -44,6 +44,21 @@
       ],
       "ip_address": "10.208.169.118",
       "id": "network1"
+    },
+    {
+      "network_id": "22222222-2222-2222-2222-222222222222",
+      "type": "ipv4",
+      "netmask": "255.255.255.0",
+      "link": "tap234ab34c-f1",
+      "routes": [
+        {
+          "netmask": "0.0.0.0",
+          "network": "0.0.0.0",
+          "gateway": "192.0.2.1"
+        }
+      ],
+      "ip_address": "192.0.2.2",
+      "id": "network2"
     }
   ],
   "links": [
@@ -60,6 +75,13 @@
       "type": null,
       "id": "tape501e1cd-10",
       "vif_id": "e501e1cd-10d0-4e63-b0c2-6542989ccbb2"
+    },
+    {
+      "ethernet_mac_address": "BC:76:4E:05:7B:12",
+      "mtu": 1500,
+      "type": null,
+      "id": "tap234ab34c-f1",
+      "vif_id": "acdb875a-87da-76cb-984c-acd9a75dbca7"
     }
   ]
 }
