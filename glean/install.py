@@ -29,9 +29,7 @@ def install(source_file, target_file, mode='0755'):
 
 def main():
 
-    if os.path.exists('/etc/init'):
-        install('glean.conf', '/etc/init/glean.conf')
-    elif os.path.exists('/usr/lib/systemd'):
+    if os.path.exists('/usr/lib/systemd'):
         install(
             'glean@.service',
             '/usr/lib/systemd/system/glean@.service')
@@ -39,6 +37,8 @@ def main():
             'glean-udev.rules',
             '/etc/udev/rules.d/99-glean.rules',
             mode='0644')
+    elif os.path.exists('/etc/init'):
+        install('glean.conf', '/etc/init/glean.conf')
     else:
         install('glean.init', '/etc/init.d/glean')
         os.system('update-rc.d glean defaults')
