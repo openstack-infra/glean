@@ -312,11 +312,7 @@ def write_ssh_keys(args):
 
     config_drive = os.path.join(args.root, 'mnt/config')
     meta_data_path = '%s/openstack/latest/meta_data.json' % config_drive
-    ssh_path = '%s/root/.ssh' % args.root
-    authorized_keys = '%s/authorized_keys' % ssh_path
     if not os.path.exists(meta_data_path):
-        return 0
-    if not os.path.exists(ssh_path) and not args.noop:
         return 0
 
     meta_data = json.load(open(meta_data_path))
@@ -324,17 +320,11 @@ def write_ssh_keys(args):
         return 0
 
     keys_to_write = []
-    if os.path.exists(authorized_keys):
-        current_keys = open(authorized_keys, 'r').read()
-        keys_to_write.append(current_keys)
-    else:
-        current_keys = ""
     for (name, key) in meta_data['public_keys'].items():
-        if key not in current_keys:
-            keys_to_write.append(
-                "# Injected key {name} by keypair extension".format(
-                    name=name))
-            keys_to_write.append(key)
+        keys_to_write.append(
+            "# Injected key {name} by keypair extension".format(
+                name=name))
+        keys_to_write.append(key)
     files_to_write = {
         '/root/.ssh/authorized_keys': '\n'.join(keys_to_write),
     }
