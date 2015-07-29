@@ -43,7 +43,7 @@ if blkid -t LABEL="config-2" ; then
 fi
 
 if [ -f /usr/bin/dpkg ] ; then
-    test -f /etc/ssh/ssh_host_rsa_key || dpkg-reconfigure openssh-server
+    test -f /etc/ssh/ssh_host_rsa_key || dpkg-reconfigure openssh-server || true
 fi
 
 if [ -n "$INTERFACE" ]; then
