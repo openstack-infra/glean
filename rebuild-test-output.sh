@@ -26,6 +26,17 @@ for vendor_dir in $(find $SAMPLE_DIR \
         > $SAMPLE_DIR/test/$vendor.keys.out
     for distro in debian ubuntu redhat fedora centos ; do
         python glean/cmd.py \
-            -n --root $vendor_dir --distro $distro > $SAMPLE_DIR/test/$vendor.$distro.network.out
+            -n --root $vendor_dir --distro $distro | python -c 'import sys
+skipping = False
+for line in sys.stdin.readlines():
+    if "eth2" in line:
+        skipping = True
+        continue
+    if line.startswith("### Write"):
+        skipping = False
+    if skipping:
+        continue
+    sys.stdout.write(line)
+' > $SAMPLE_DIR/test/$vendor.$distro.network.out
     done
 done

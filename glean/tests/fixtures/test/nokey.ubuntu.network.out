@@ -8,3 +8,6 @@ iface eth0 inet dhcp
 ### Write /etc/network/interfaces.d/eth1.cfg
 auto eth1
 iface eth1 inet dhcp
+### Write /etc/network/interfaces.d/eth3.cfg
+auto eth3
+iface eth3 inet dhcp
