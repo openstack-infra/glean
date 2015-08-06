@@ -329,6 +329,7 @@ def write_ssh_keys(args):
     """
 
     config_drive = os.path.join(args.root, 'mnt/config')
+    ssh_path = os.path.join(args.root, 'root/.ssh')
     meta_data_path = '%s/openstack/latest/meta_data.json' % config_drive
     if not os.path.exists(meta_data_path):
         return 0
@@ -347,7 +348,7 @@ def write_ssh_keys(args):
         '/root/.ssh/authorized_keys': '\n'.join(keys_to_write),
     }
     try:
-        os.mkdir('/root/.ssh', 0o700)
+        os.mkdir(ssh_path, 0o700)
     except OSError as e:
         if e.errno != 17:  # not File Exists
             raise
