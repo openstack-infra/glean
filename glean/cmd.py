@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# Copyright (c) 2015 Monty Taylor
 # Copyright (c) 2015 Hewlett-Packard Development Company, L.P.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -36,7 +37,7 @@ def _exists_rh_interface(name):
     return os.path.exists(file_to_check)
 
 
-def _write_rh_interface(name, interface):
+def _write_rh_interface(name, interface, has_vlan):
     files_to_write = dict()
     results = """# Automatically generated, do not edit
 DEVICE={name}
@@ -53,6 +54,8 @@ NM_CONTROLLED=no
         netmask=interface['netmask'],
 
     )
+    if has_vlan:
+        results += "VLAN=yes\n"
     routes = []
     for route in interface['routes']:
         if route['network'] == '0.0.0.0' and route['netmask'] == '0.0.0.0':
@@ -76,10 +79,9 @@ NM_CONTROLLED=no
     return files_to_write
 
 
-def _write_rh_dhcp(name, hwaddr):
+def _write_rh_dhcp(name, hwaddr, has_vlan):
     filename = '/etc/sysconfig/network-scripts/ifcfg-{name}'.format(name=name)
-    return {
-        filename: """# Automatically generated, do not edit
+    results = """# Automatically generated, do not edit
 DEVICE={name}
 BOOTPROTO=dhcp
 HWADDR={hwaddr}
@@ -87,7 +89,9 @@ ONBOOT=yes
 NM_CONTROLLED=no
 TYPE=Ethernet
 """.format(name=name, hwaddr=hwaddr)
-    }
+    if has_vlan:
+        results += "VLAN=yes\n"
+    return {filename: results}
 
 
 def write_redhat_interfaces(interfaces, sys_interfaces):
@@ -99,14 +103,19 @@ def write_redhat_interfaces(interfaces, sys_interfaces):
             continue
         if iname not in sys_interfaces:
             continue
+        interface_name = sys_interfaces[iname]
+        has_vlan = False
+        if 'vlan_id' in interface:
+            interface_name = "{0}.{1}".format(
+                interface_name, interface['vlan_id'])
+            has_vlan = True
         if interface['type'] == 'ipv4':
-            interface_name = sys_interfaces[iname]
             files_to_write.update(
-                _write_rh_interface(interface_name, interface))
+                _write_rh_interface(interface_name, interface, has_vlan))
         if interface['type'] == 'ipv4_dhcp':
-            interface_name = sys_interfaces[iname]
             files_to_write.update(
-                _write_rh_dhcp(interface_name, interface['mac_address']))
+                _write_rh_dhcp(
+                    interface_name, interface['mac_address'], has_vlan))
     for mac, iname in sorted(
             sys_interfaces.items(), key=lambda x: x[1]):
         if _exists_rh_interface(iname):
@@ -115,7 +124,7 @@ def write_redhat_interfaces(interfaces, sys_interfaces):
         if mac in interfaces:
             # We have a config drive config, move on
             continue
-        files_to_write.update(_write_rh_dhcp(iname, mac))
+        files_to_write.update(_write_rh_dhcp(iname, mac, False))
     return files_to_write
 
 
@@ -138,10 +147,16 @@ def write_debian_interfaces(interfaces, sys_interfaces):
         interface = interfaces[iname]
         interface_name = sys_interfaces[iname]
         iface_path = os.path.join(eni_d_path, '%s.cfg' % interface_name)
+        vlan_raw_device = None
 
+        if 'vlan_id' in interface:
+            vlan_raw_device = interface_name
+            interface_name = "vlan0{0}".format(interface['vlan_id'])
         if interface['type'] == 'ipv4_dhcp':
             result = "auto {0}\n".format(interface_name)
             result += "iface {0} inet dhcp\n".format(interface_name)
+            if vlan_raw_device is not None:
+                result += "    vlan-raw-device {0}\n".format(vlan_raw_device)
             files_to_write[iface_path] = result
             continue
         if interface['type'] == 'ipv6':
@@ -155,6 +170,8 @@ def write_debian_interfaces(interfaces, sys_interfaces):
         result = "auto {0}\n".format(interface_name)
         result += "iface {name} {link_type} static\n".format(
             name=interface_name, link_type=link_type)
+        if vlan_raw_device:
+            result += "    vlan-raw-device {0}\n".format(vlan_raw_device)
         result += "    address {0}\n".format(interface['ip_address'])
         result += "    netmask {0}\n".format(interface['netmask'])
         for route in interface['routes']:
@@ -195,11 +212,31 @@ def get_config_drive_interfaces(net):
     if 'networks' not in net or 'links' not in net:
         return interfaces
 
+    # tmp_ifaces is a dict keyed on net id
     tmp_ifaces = {}
+    tmp_links = {}
     for network in net['networks']:
         tmp_ifaces[network['link']] = network
     for link in net['links']:
-        tmp_ifaces[link['id']]['mac_address'] = link['ethernet_mac_address']
+        tmp_links[link['id']] = link
+    keys_to_del = []
+    for link in tmp_links.values():
+        if link['type'] == 'vlan':
+            keys_to_del.append(link['vlan_link'])
+            new_link = dict(tmp_links.get(link['vlan_link'], {}))
+            new_link.update(link)
+            link.update(new_link)
+        link['mac_address'] = link.get(
+            'ethernet_mac_address', link.get('vlan_mac_address'))
+        for old_key in ('ethernet_mac_address', 'vlan_mac_address'):
+            if old_key in link:
+                del link[old_key]
+    for key in keys_to_del:
+        del tmp_links[key]
+    for link in tmp_links.values():
+        tmp_ifaces[link['id']]['mac_address'] = link['mac_address']
+        if 'vlan_id' in link:
+            tmp_ifaces[link['id']]['vlan_id'] = link['vlan_id']
     for k, v in tmp_ifaces.items():
         v['link'] = k
         interfaces[v['mac_address'].lower()] = v
