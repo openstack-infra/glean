@@ -347,15 +347,15 @@ def write_network_info_from_config_drive(args):
     network_info_file = '%s/openstack/latest/network_info.json' % config_drive
     vendor_data_file = '%s/openstack/latest/vendor_data.json' % config_drive
 
-    v = {}
+    network_info = {}
     if os.path.exists(network_info_file):
-        v = json.load(open(network_info_file))
+        network_info = json.load(open(network_info_file))
     elif os.path.exists(vendor_data_file):
         vendor_data = json.load(open(vendor_data_file))
         if 'network_info' in vendor_data:
-            v = vendor_data['network_info']
-    dns = write_dns_info(get_dns_from_config_drive(v))
-    interfaces = get_config_drive_interfaces(v)
+            network_info = vendor_data['network_info']
+    dns = write_dns_info(get_dns_from_config_drive(network_info))
+    interfaces = get_config_drive_interfaces(network_info)
     sys_interfaces = get_sys_interfaces(args.interface, args)
 
     write_static_network_info(interfaces, sys_interfaces, dns, args)
