@@ -344,8 +344,12 @@ def write_ssh_keys(args):
     files_to_write = {
         '/root/.ssh/authorized_keys': '\n'.join(keys_to_write),
     }
-    if not os.path.exists('/root/.ssh'):
+    try:
         os.mkdir('/root/.ssh', 0o700)
+    except OSError as e:
+        if e.errno == 17:  # File Exists
+            pass
+        raise
     finish_files(files_to_write, args)
 
 
