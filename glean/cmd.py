@@ -23,6 +23,8 @@ import subprocess
 import sys
 import time
 
+from glean import systemlock
+
 post_up = "    post-up route add -net {net} netmask {mask} gw {gw} || true\n"
 pre_down = "    pre-down route del -net {net} netmask {mask} gw {gw} || true\n"
 
@@ -412,12 +414,13 @@ def main():
         '--skip-network', dest='skip', action='store_true',
         help="Do not write network info")
     args = parser.parse_args()
-    if args.ssh:
-        write_ssh_keys(args)
-    if args.hostname:
-        set_hostname_from_config_drive(args)
-    if args.interface != 'lo' and not args.skip:
-        write_network_info_from_config_drive(args)
+    with systemlock.Lock(os.path.join(args.root, 'tmp/glean.lock')):
+        if args.ssh:
+            write_ssh_keys(args)
+        if args.hostname:
+            set_hostname_from_config_drive(args)
+        if args.interface != 'lo' and not args.skip:
+            write_network_info_from_config_drive(args)
     return 0
 
 
