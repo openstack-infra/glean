@@ -349,9 +349,8 @@ def write_ssh_keys(args):
     try:
         os.mkdir('/root/.ssh', 0o700)
     except OSError as e:
-        if e.errno == 17:  # File Exists
-            pass
-        raise
+        if e.errno != 17:  # not File Exists
+            raise
     finish_files(files_to_write, args)
 
 
