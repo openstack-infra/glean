@@ -4,4 +4,4 @@ source = glean
 omit = glean/tests/*,glean/openstack/*
 
 [report]
-ignore-errors = True
+ignore_errors = True
