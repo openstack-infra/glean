@@ -345,7 +345,7 @@ def write_ssh_keys(args):
                 name=name))
         keys_to_write.append(key)
     files_to_write = {
-        '/root/.ssh/authorized_keys': '\n'.join(keys_to_write),
+        '/root/.ssh/authorized_keys': '\n'.join(keys_to_write) + '\n',
     }
     try:
         os.mkdir(ssh_path, 0o700)
