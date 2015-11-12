@@ -451,7 +451,7 @@ def main():
         '--skip-network', dest='skip', action='store_true',
         help="Do not write network info")
     args = parser.parse_args()
-    with systemlock.Lock(os.path.join(args.root, 'tmp/glean.lock')):
+    with systemlock.Lock('/tmp/glean.lock'):
         if args.ssh:
             write_ssh_keys(args)
         if args.hostname:
