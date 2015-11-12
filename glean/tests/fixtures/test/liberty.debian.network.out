@@ -20,9 +20,9 @@ iface eth1 inet static
 ### Write /etc/network/interfaces.d/eth3.cfg
 auto eth3
 iface eth3 inet dhcp
-### Write /etc/network/interfaces.d/eth4.cfg
-auto vlan025
-iface vlan025 inet dhcp
+### Write /etc/network/interfaces.d/eth4.25.cfg
+auto eth4.25
+iface eth4.25 inet dhcp
     vlan-raw-device eth4
 ### Write /etc/resolv.conf
 nameserver 72.3.128.241
