@@ -146,12 +146,15 @@ def write_debian_interfaces(interfaces, sys_interfaces):
             continue
         interface = interfaces[iname]
         interface_name = sys_interfaces[iname]
-        iface_path = os.path.join(eni_d_path, '%s.cfg' % interface_name)
         vlan_raw_device = None
 
         if 'vlan_id' in interface:
             vlan_raw_device = interface_name
-            interface_name = "vlan0{0}".format(interface['vlan_id'])
+            interface_name = "{0}.{1}".format(vlan_raw_device,
+                                              interface['vlan_id'])
+
+        iface_path = os.path.join(eni_d_path, '%s.cfg' % interface_name)
+
         if interface['type'] == 'ipv4_dhcp':
             result = "auto {0}\n".format(interface_name)
             result += "iface {0} inet dhcp\n".format(interface_name)
