@@ -129,7 +129,7 @@ def write_redhat_interfaces(interfaces, sys_interfaces):
 
 
 def _exists_debian_interface(name):
-    file_to_check = '/etc/network/interfaces.d/{name}'.format(name=name)
+    file_to_check = '/etc/network/interfaces.d/{name}.cfg'.format(name=name)
     return os.path.exists(file_to_check)
 
 
@@ -152,6 +152,9 @@ def write_debian_interfaces(interfaces, sys_interfaces):
             vlan_raw_device = interface_name
             interface_name = "{0}.{1}".format(vlan_raw_device,
                                               interface['vlan_id'])
+
+        if _exists_debian_interface(interface_name):
+            continue
 
         iface_path = os.path.join(eni_d_path, '%s.cfg' % interface_name)
 

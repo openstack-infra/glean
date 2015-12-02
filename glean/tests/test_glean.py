@@ -106,7 +106,7 @@ class TestGlean(base.BaseTestCase):
                     sample_data_path, sample_prefix,
                     path[1:])
             if path in ['/etc/sysconfig/network-scripts/ifcfg-eth2',
-                        '/etc/network/interfaces.d/eth2']:
+                        '/etc/network/interfaces.d/eth2.cfg']:
                 # Pretend this file exists, we need to test skipping
                 # pre-existing config files
                 return True
