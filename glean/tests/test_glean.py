@@ -110,6 +110,10 @@ class TestGlean(base.BaseTestCase):
                 # Pretend this file exists, we need to test skipping
                 # pre-existing config files
                 return True
+            elif (path.startswith('/etc/sysconfig/network-scripts/') or
+                  path.startswith('/etc/network/interfaces.d/')):
+                # Don't check the host os's network config
+                return False
             return real_path_exists(path)
 
         self.useFixture(fixtures.MonkeyPatch('os.path.exists',
