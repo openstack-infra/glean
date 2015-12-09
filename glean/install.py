@@ -21,19 +21,53 @@ import sys
 log = logging.getLogger("glean-install")
 
 
-def install(source_file, target_file, mode='0755'):
+def _find_gleansh_path():
+    # the "glean.sh" file is installed in /usr/bin/ on Fedora, and
+    # /usr/local/bin on Ubuntu/Debian thanks to differences in pip and
+    # where it likes to put scripts.
+    if os.path.exists("/usr/local/bin/glean.sh"):
+        return "/usr/local/bin"
+    if os.path.exists("/usr/bin/glean.sh"):
+        return "/usr/bin"
+    log.error("Unable to find glean.sh!")
+    sys.exit(1)
+
+
+def install(source_file, target_file, mode='0755', replacements={}):
+    """Install given SOURCE_FILE to TARGET_FILE with given MODE
+
+    REPLACEMENTS is a dictionary where each KEY will result in the
+    template "%%KEY%%" being replaced with its VALUE in TARGET_FILE
+    (this is just a sed -i wrapper)
+    """
+
     log.info("Installing %s -> %s" % (source_file, target_file))
+
     script_dir = os.path.join(
         os.path.dirname(os.path.realpath(__file__)), 'init')
-    ret = os.system(
-        'install -D -g root -o root'
-        ' -m {mode} {source_file} {target_file}'.format(
-            source_file=os.path.join(script_dir, source_file),
-            target_file=target_file,
-            mode=mode))
+
+    cmd = ('install -D -g root -o root'
+           ' -m {mode} {source_file} {target_file}').format(
+               source_file=os.path.join(script_dir, source_file),
+               target_file=target_file,
+               mode=mode)
+    log.info(cmd)
+    ret = os.system(cmd)
     if ret != 0:
         log.error("Failed to install %s!" % source_file)
         sys.exit(ret)
+
+    for k, v in replacements.iteritems():
+        log.info("Replacing %s -> %s in %s" % (k, v, target_file))
+
+        cmd = 'sed -i "s|%%{k}%%|{v}|g" {target_file}'.format(
+            k=k, v=v, target_file=target_file)
+        log.info(cmd)
+        ret = os.system(cmd)
+
+        if ret != 0:
+            log.error("Failed to substitute in %s" % target_file)
+            sys.exit(ret)
 
 
 def main():
@@ -52,10 +86,15 @@ def main():
         logging.basicConfig(level=logging.INFO)
 
     if os.path.exists('/usr/lib/systemd'):
+        p = _find_gleansh_path()
+
         log.info("Installing systemd services")
+        log.info("glean.sh in %s" % p)
+
         install(
             'glean@.service',
-            '/usr/lib/systemd/system/glean@.service')
+            '/usr/lib/systemd/system/glean@.service',
+            replacements={'GLEANSH_PATH': p})
         install(
             'glean-udev.rules',
             '/etc/udev/rules.d/99-glean.rules',
