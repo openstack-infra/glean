@@ -17,6 +17,7 @@
 
 import argparse
 import json
+import logging
 import os
 import platform
 import re
@@ -25,6 +26,8 @@ import sys
 import time
 
 from glean import systemlock
+
+log = logging.getLogger("glean")
 
 post_up = "    post-up route add -net {net} netmask {mask} gw {gw} || true\n"
 pre_down = "    pre-down route del -net {net} netmask {mask} gw {gw} || true\n"
@@ -120,9 +123,11 @@ def write_redhat_interfaces(interfaces, sys_interfaces):
             sys_interfaces.items(), key=lambda x: x[1]):
         if _exists_rh_interface(iname):
             # This interface already has a config file, move on
+            log.debug("%s already has config file, skipping" % iname)
             continue
         if mac in interfaces:
             # We have a config drive config, move on
+            log.debug("%s configured via config-drive" % mac)
             continue
         files_to_write.update(_write_rh_dhcp(iname, mac, False))
     return files_to_write
@@ -216,6 +221,7 @@ def get_config_drive_interfaces(net):
     interfaces = {}
 
     if 'networks' not in net or 'links' not in net:
+        log.debug("No config-drive interfaces defined")
         return interfaces
 
     # tmp_ifaces is a dict keyed on net id
@@ -251,6 +257,7 @@ def get_config_drive_interfaces(net):
 
 def get_dns_from_config_drive(net):
     if 'services' not in net:
+        log.debug("No DNS info available from config-drive")
         return []
     return [
         f['address'] for f in net['services'] if f['type'] == 'dns'
@@ -263,6 +270,7 @@ def write_static_network_info(
     distro = args.distro
     if not distro:
         distro = platform.dist()[0].lower()
+    log.debug("Detected distro : %s" % distro)
     if distro in ('debian', 'ubuntu'):
         files_to_write.update(
             write_debian_interfaces(interfaces, sys_interfaces))
@@ -278,14 +286,17 @@ def write_static_network_info(
 def finish_files(files_to_write, args):
     files = sorted(files_to_write.keys())
     for k in files:
+        logging.debug("Writing output file : %s")
         if not files_to_write[k]:
             # Don't write empty files
+            logging.debug(" ... is blank, skipped")
             continue
         if args.noop:
             sys.stdout.write("### Write {0}\n{1}".format(k, files_to_write[k]))
         else:
             with open(k, 'w') as outfile:
                 outfile.write(files_to_write[k])
+        logging.debug(" ... done")
 
 
 def is_interface_live(interface, sys_root):
@@ -318,10 +329,12 @@ def interface_live(iface, sys_root, args):
 
 
 def get_sys_interfaces(interface, args):
+    log.debug("Probing system interfaces")
     sys_root = os.path.join(args.root, 'sys/class/net')
 
     sys_interfaces = {}
     if interface is not None:
+        log.debug("Only considering interface %s from arguments" % interface)
         interfaces = [interface]
     else:
         interfaces = [f for f in os.listdir(sys_root) if f != 'lo']
@@ -333,6 +346,7 @@ def get_sys_interfaces(interface, args):
         mac = open('%s/%s/address' % (sys_root, iface), 'r').read().strip()
         if interface_live(iface, sys_root, args):
             sys_interfaces[mac] = iface
+            log.debug("Adding system interface %s (%s)" % (iface, mac))
     return sys_interfaces
 
 
@@ -352,11 +366,21 @@ def write_network_info_from_config_drive(args):
 
     network_info = {}
     if os.path.exists(network_info_file):
+        log.debug("Found network_info file %s" % network_info_file)
         network_info = json.load(open(network_info_file))
     elif os.path.exists(vendor_data_file):
+        log.debug("Found vendor_data_file file %s" % vendor_data_file)
         vendor_data = json.load(open(vendor_data_file))
         if 'network_info' in vendor_data:
+            log.debug("Found network_info in vendor_data_file")
             network_info = vendor_data['network_info']
+    else:
+        log.debug("Did not find vendor_data or network_info in config-drive")
+
+    if not network_info:
+        log.debug("Found no network_info in config-drive!  "
+                  "Asusming DHCP interfaces")
+
     dns = write_dns_info(get_dns_from_config_drive(network_info))
     interfaces = get_config_drive_interfaces(network_info)
     sys_interfaces = get_sys_interfaces(args.interface, args)
@@ -456,7 +480,16 @@ def main():
     parser.add_argument(
         '--skip-network', dest='skip', action='store_true',
         help="Do not write network info")
+    parser.add_argument(
+        '--debug', dest='debug', action='store_true',
+        help="Enable debugging output")
     args = parser.parse_args()
+
+    if args.debug:
+        logging.basicConfig(loglevel=logging.DEBUG)
+    else:
+        logging.basicConfig(loglevel=logging.INFO)
+
     with systemlock.Lock('/tmp/glean.lock'):
         if args.ssh:
             write_ssh_keys(args)
