@@ -18,6 +18,7 @@
 import argparse
 import json
 import logging
+import logging.handlers
 import os
 import platform
 import re
@@ -500,10 +501,18 @@ def main():
         help="Enable debugging output")
     args = parser.parse_args()
 
+    # always log debug level logs into syslog; --debug sends detailed
+    # logs to stdout
+    log.setLevel(logging.DEBUG)
+    syslog_handler = logging.handlers.SysLogHandler('/dev/log')
+    syslog_handler.setLevel(logging.DEBUG)
+    stream_handler = logging.StreamHandler()
+    stream_handler.setLevel(logging.INFO)
+    stream_handler.setFormatter(logging.Formatter(logging.BASIC_FORMAT))
+    log.addHandler(syslog_handler)
+    log.addHandler(stream_handler)
     if args.debug:
-        logging.basicConfig(level=logging.DEBUG)
-    else:
-        logging.basicConfig(level=logging.INFO)
+        stream_handler.setLevel(logging.DEBUG)
 
     log.debug("Starting glean")
     log.debug("Detected distro : %s" % args.distro)
