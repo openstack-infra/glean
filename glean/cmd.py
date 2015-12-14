@@ -286,17 +286,17 @@ def write_static_network_info(
 def finish_files(files_to_write, args):
     files = sorted(files_to_write.keys())
     for k in files:
-        logging.debug("Writing output file : %s")
+        log.debug("Writing output file : %s" % k)
         if not files_to_write[k]:
             # Don't write empty files
-            logging.debug(" ... is blank, skipped")
+            log.debug(" ... is blank, skipped")
             continue
         if args.noop:
             sys.stdout.write("### Write {0}\n{1}".format(k, files_to_write[k]))
         else:
             with open(k, 'w') as outfile:
                 outfile.write(files_to_write[k])
-        logging.debug(" ... done")
+        log.debug(" ... done")
 
 
 def is_interface_live(interface, sys_root):
@@ -486,10 +486,11 @@ def main():
     args = parser.parse_args()
 
     if args.debug:
-        logging.basicConfig(loglevel=logging.DEBUG)
+        logging.basicConfig(level=logging.DEBUG)
     else:
-        logging.basicConfig(loglevel=logging.INFO)
+        logging.basicConfig(level=logging.INFO)
 
+    log.debug("Starting glean")
     with systemlock.Lock('/tmp/glean.lock'):
         if args.ssh:
             write_ssh_keys(args)
@@ -497,6 +498,7 @@ def main():
             set_hostname_from_config_drive(args)
         if args.interface != 'lo' and not args.skip:
             write_network_info_from_config_drive(args)
+    log.debug("Done!")
     return 0
 
 
