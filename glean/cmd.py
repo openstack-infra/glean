@@ -267,14 +267,10 @@ def get_dns_from_config_drive(net):
 def write_static_network_info(
         interfaces, sys_interfaces, files_to_write, args):
 
-    distro = args.distro
-    if not distro:
-        distro = platform.dist()[0].lower()
-    log.debug("Detected distro : %s" % distro)
-    if distro in ('debian', 'ubuntu'):
+    if args.distro in ('debian', 'ubuntu'):
         files_to_write.update(
             write_debian_interfaces(interfaces, sys_interfaces))
-    elif distro in ('redhat', 'centos', 'fedora', 'suse', 'opensuse'):
+    elif args.distro in ('redhat', 'centos', 'fedora', 'suse', 'opensuse'):
         files_to_write.update(
             write_redhat_interfaces(interfaces, sys_interfaces))
     else:
@@ -464,8 +460,9 @@ def main():
     parser.add_argument(
         '-n', '--noop', action='store_true', help='Do not write files')
     parser.add_argument(
-        '--distro', dest='distro', default=None,
-        help='Override detected distro')
+        '--distro', dest='distro',
+        default=platform.dist()[0].lower(),
+        help='Override distro (detected "%s")' % platform.dist()[0].lower())
     parser.add_argument(
         '--root', dest='root', default='/',
         help='Mounted root for config drive info, defaults to /')
@@ -491,6 +488,8 @@ def main():
         logging.basicConfig(level=logging.INFO)
 
     log.debug("Starting glean")
+    log.debug("Detected distro : %s" % args.distro)
+
     with systemlock.Lock('/tmp/glean.lock'):
         if args.ssh:
             write_ssh_keys(args)
