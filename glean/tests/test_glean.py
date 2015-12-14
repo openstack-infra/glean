@@ -97,6 +97,8 @@ class TestGlean(base.BaseTestCase):
         self.useFixture(fixtures.MonkeyPatch('os.listdir', fake_listdir))
         self.useFixture(fixtures.MonkeyPatch(
             'subprocess.check_output', mock.Mock()))
+        self.useFixture(fixtures.MonkeyPatch('os.system',
+                                             mock.Mock(return_value=0)))
 
         real_path_exists = os.path.exists
 
