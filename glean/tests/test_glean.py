@@ -167,15 +167,20 @@ class TestGlean(base.BaseTestCase):
         with open(os.path.join(sample_data_path, provider,
                                meta_data_path)) as fh:
             meta_data = json.load(fh)
-            hostname = meta_data['name'].split('.')[0]
+            hostname = meta_data['name']
 
         mock_call.assert_called_once_with(['hostname', hostname])
         self.file_handle_mocks['/etc/hostname'].write.assert_has_calls(
             [mock.call(hostname), mock.call('\n')])
 
         # Check hosts entry
-        self.file_handle_mocks['/etc/hosts'].write.assert_called_once_with(
-            '127.0.1.1 %s\n' % hostname)
+        calls = [mock.call('127.0.0.1 %s\n' % hostname), ]
+        short_hostname = hostname.split('.')[0]
+        if hostname != short_hostname:
+            calls.append(mock.call('127.0.0.1 %s\n' % short_hostname))
+
+        self.file_handle_mocks['/etc/hosts'].write.assert_has_calls(
+            calls, any_order=True)
 
     def test_glean(self):
         self._assert_distro_provider(self.distro, self.style)

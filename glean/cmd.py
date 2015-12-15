@@ -435,7 +435,7 @@ def set_hostname_from_config_drive(args):
     if 'name' not in meta_data:
         return
 
-    hostname = meta_data['name'].split('.')[0]
+    hostname = meta_data['name']
 
     ret = subprocess.call(['hostname', hostname])
 
@@ -446,17 +446,24 @@ def set_hostname_from_config_drive(args):
             fh.write(hostname)
             fh.write('\n')
 
-        # See if we already have a hosts entry for hostname
-        prog = re.compile('^127.0.1.1 .*%s' % hostname)
-        match = None
-        if os.path.isfile('/etc/hosts'):
-            with open('/etc/hosts') as fh:
-                match = prog.match(fh.read())
+        # check short hostname and generate list for hosts
+        hosts_to_add = [hostname, ]
+        short_hostname = hostname.split('.')[0]
+        if short_hostname != hostname:
+            hosts_to_add.append(short_hostname)
 
-        # Write out a hosts entry for hostname
-        if match is None:
-            with open('/etc/hosts', 'w+') as fh:
-                fh.write('127.0.1.1 %s\n' % hostname)
+        for host in hosts_to_add:
+            # See if we already have a hosts entry for hostname
+            prog = re.compile('^127.0.0.1 .*%s\n' % host)
+            match = None
+            if os.path.isfile('/etc/hosts'):
+                with open('/etc/hosts') as fh:
+                    match = prog.match(fh.read())
+
+            # Write out a hosts entry for hostname
+            if match is None:
+                with open('/etc/hosts', 'w+') as fh:
+                    fh.write(u'127.0.0.1 %s\n' % host)
 
 
 def main():
