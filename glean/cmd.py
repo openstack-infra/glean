@@ -477,7 +477,7 @@ def set_hostname_from_config_drive(args):
 
             # Write out a hosts entry for hostname
             if match is None:
-                with open('/etc/hosts', 'w+') as fh:
+                with open('/etc/hosts', 'a+') as fh:
                     fh.write(u'127.0.0.1 %s\n' % host)
 
 
