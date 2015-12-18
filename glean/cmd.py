@@ -450,6 +450,12 @@ def set_hostname_from_config_drive(args):
         return
 
     hostname = meta_data['name']
+    log.debug("Got hostname from meta_data.json : %s" % hostname)
+    # underscore is not a valid hostname, but it's easy to name your
+    # host with that on the command-line.  be helpful...
+    if '_' in hostname:
+        hostname = hostname.replace('_', '-')
+        log.debug("Fixed up hostname to %s" % hostname)
 
     ret = subprocess.call(['hostname', hostname])
 
