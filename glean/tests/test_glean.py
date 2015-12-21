@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import errno
 import json
 import os
 
@@ -48,6 +49,7 @@ class TestGlean(base.BaseTestCase):
 
     def setUp(self):
         super(TestGlean, self).setUp()
+        self._resolv_unlinked = False
 
     def _patch_argv(self, args):
         self.useFixture(fixtures.MonkeyPatch('sys.argv', ['.'] + args))
@@ -70,6 +72,19 @@ class TestGlean(base.BaseTestCase):
                     mock_handle.__enter__ = mock.Mock(return_value=mock_handle)
                     mock_handle.__exit__ = mock.Mock()
                     mock_handle.read.return_value = ''
+                    # Test broken symlink handling -- we want to
+                    # unlink the file and write a new one.  Simulate a
+                    # /etc/resolv.conf that at first returns ELOOP
+                    # (i.e. broken symlink) when opened, but on the
+                    # second call opens as usual.  We check that there
+                    # was an os.unlink() performed
+                    if args[0].startswith('/etc/resolv.conf'):
+                        self._resolv_unlinked = True
+                        mock_handle.__enter__ = mock.Mock(
+                            side_effect=[IOError(errno.ELOOP,
+                                                 os.strerror(errno.ELOOP),
+                                                 args[0]),
+                                         mock_handle])
                     self.file_handle_mocks[args[0]] = mock_handle
                 return mock_handle
             elif args[0].startswith('/sys/class/net'):
@@ -147,6 +162,9 @@ class TestGlean(base.BaseTestCase):
         mock_call.return_value = 0
         self.useFixture(fixtures.MonkeyPatch('subprocess.call', mock_call))
 
+        mock_unlink = mock.Mock(return_value=0)
+        self.useFixture(fixtures.MonkeyPatch('os.unlink', mock_unlink))
+
         cmd.main()
 
         output_filename = '%s.%s.network.out' % (provider, distro.lower())
@@ -173,6 +191,9 @@ class TestGlean(base.BaseTestCase):
             self.assertIn(dest, self.file_handle_mocks)
             write_handle = self.file_handle_mocks[dest].write
             write_handle.assert_called_once_with(content)
+
+        if self._resolv_unlinked:
+            mock_unlink.assert_called_once_with('/etc/resolv.conf')
 
         # Check hostname
         meta_data_path = 'mnt/config/openstack/latest/meta_data.json'

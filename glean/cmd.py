@@ -16,6 +16,7 @@
 # limitations under the License.
 
 import argparse
+import errno
 import json
 import logging
 import os
@@ -435,18 +436,37 @@ def write_static_network_info(
 
 def finish_files(files_to_write, args):
     files = sorted(files_to_write.keys())
+    log.debug("Writing output files")
     for k in files:
-        log.debug("Writing output file : %s" % k)
         if not files_to_write[k]:
             # Don't write empty files
-            log.debug(" ... is blank, skipped")
+            log.debug("%s is blank, skipped" % k)
             continue
+
         if args.noop:
             sys.stdout.write("### Write {0}\n{1}".format(k, files_to_write[k]))
-        else:
-            with open(k, 'w') as outfile:
-                outfile.write(files_to_write[k])
-        log.debug(" ... done")
+            continue
+
+        retries = 0
+        while True:
+            try:
+                log.debug("Writing output file : %s" % k)
+                with open(k, 'w') as outfile:
+                    outfile.write(files_to_write[k])
+                log.debug(" ... done")
+                break
+            except IOError as e:
+                # if we got ELOOP the file was a dangling or bad
+                # symlink.  We're taking ownership of this, so
+                # overwrite it.
+                if e.errno == errno.ELOOP and retries < 1:
+                    log.debug("Dangling symlink <%s>; "
+                              "unlinking and trying again" % k)
+                    os.unlink(k)
+                    retries = 1
+                    continue
+                else:
+                    raise
 
 
 def is_interface_live(interface, sys_root):
