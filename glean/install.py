@@ -94,6 +94,7 @@ def main():
         install(
             'glean@.service',
             '/usr/lib/systemd/system/glean@.service',
+            mode='0644',
             replacements={'GLEANSH_PATH': p})
         install(
             'glean-udev.rules',
