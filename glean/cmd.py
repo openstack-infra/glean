@@ -462,7 +462,7 @@ def set_hostname_from_config_drive(args):
             fh.write('\n')
 
         # check short hostname and generate list for hosts
-        hosts_to_add = [hostname, ]
+        hosts_to_add = ['localhost', hostname, ]
         short_hostname = hostname.split('.')[0]
         if short_hostname != hostname:
             hosts_to_add.append(short_hostname)
