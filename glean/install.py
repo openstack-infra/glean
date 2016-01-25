@@ -33,12 +33,17 @@ def _find_gleansh_path():
     sys.exit(1)
 
 
-def install(source_file, target_file, mode='0755', replacements={}):
+def install(source_file, target_file, mode='0755', replacements=dict()):
     """Install given SOURCE_FILE to TARGET_FILE with given MODE
 
     REPLACEMENTS is a dictionary where each KEY will result in the
     template "%%KEY%%" being replaced with its VALUE in TARGET_FILE
     (this is just a sed -i wrapper)
+
+    :param source_file: file to be installed
+    :param target_file: location file is being installed to
+    :param mode: mode of file being installed
+    :param replacements: dict of key/value replacements to the file
     """
 
     log.info("Installing %s -> %s" % (source_file, target_file))
@@ -85,6 +90,10 @@ def main():
     else:
         logging.basicConfig(level=logging.INFO)
 
+    # needs to go first because gentoo can have systemd along side openrc
+    if os.path.exists('/etc/gentoo-release'):
+        log.info('installing openrc services')
+        install('glean.openrc', '/etc/init.d/glean')
     if os.path.exists('/usr/lib/systemd'):
         p = _find_gleansh_path()
 

@@ -1,0 +1,23 @@
+### Write /etc/resolv.conf
+nameserver 72.3.128.241
+nameserver 72.3.128.240
+### Write /etc/conf.d/net.eth0
+# Automatically generated, do not edit
+config_eth0="23.253.229.154 netmask 255.255.255.0"
+mac_eth0="BC:76:4E:01:62:86"
+routes_eth0="default via 23.253.229.1"
+### Write /etc/conf.d/net.eth1
+# Automatically generated, do not edit
+config_eth1="10.208.169.118 netmask 255.255.224.0"
+mac_eth1="BC:76:4E:05:7B:06"
+routes_eth1="10.176.0.0 netmask 255.240.0.0 via 10.208.160.1
+10.208.0.0 netmask 255.240.0.0 via 10.208.160.1"
+### Write /etc/conf.d/net.eth3
+# Automatically generated, do not edit
+config_eth3="dhcp"
+mac_eth3="BC:76:4E:12:a4:bb"
+### Write /etc/conf.d/net.eth4
+# Automatically generated, do not edit
+vlans_eth4="25"
+config_eth4_25="dhcp"
+mac_eth4_25="BC:76:4E:12:a4:bc"

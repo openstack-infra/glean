@@ -26,15 +26,22 @@ function config_exists() {
         if [ -f "/etc/sysconfig/network-scripts/ifcfg-$interface" ]; then
             return 0
         fi
+    # Gentoo: return the value of grep -q INTERFACE in the config file, if it exists
+    elif [[ -a /etc/gentoo-release ]]; then
+        if [[ -a /etc/conf.d/net ]]; then
+            grep -q "${interface}" /etc/conf.d/net
+        else
+            return 1
+        fi
     else
-        ifquery $interface >/dev/null 2>&1 && return 0 || return 1
+        ifquery "${interface}" >/dev/null 2>&1 && return 0 || return 1
     fi
     return 1
 }
 
 
 # Test to see if config-drive exists. If not, skip and assume DHCP networking
-# will work becasue sanity
+# will work because sanity
 if blkid -t LABEL="config-2" ; then
     # Mount config drive
     mkdir -p /mnt/config
@@ -50,4 +57,9 @@ if [ -n "$INTERFACE" ]; then
     glean --interface $INTERFACE
 else
     glean
+fi
+
+# gentoo needs manual interface restart as it doesn't have ifup and the like
+if [[ -a /etc/gentoo-release ]]; then
+    find /etc/init.d/net.* ! -name net.lo -exec {} restart \;
 fi
