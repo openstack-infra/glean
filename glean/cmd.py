@@ -342,6 +342,13 @@ def interface_live(iface, sys_root, args):
     return False
 
 
+def is_interface_vlan(iface):
+    file_name = '/etc/network/interfaces.d/%s.cfg' % iface
+    if os.path.exists(file_name):
+        return 'vlan-raw-device' in open(file_name).read()
+    return False
+
+
 def get_sys_interfaces(interface, args):
     log.debug("Probing system interfaces")
     sys_root = os.path.join(args.root, 'sys/class/net')
@@ -353,6 +360,11 @@ def get_sys_interfaces(interface, args):
     else:
         interfaces = [f for f in os.listdir(sys_root) if f != 'lo']
     for iface in interfaces:
+        # if interface is for an already configured vlan, skip it
+        if is_interface_vlan(iface):
+            log.debug("Skipping vlan %s" % iface)
+            continue
+
         mac_addr_type = open(
             '%s/%s/addr_assign_type' % (sys_root, iface), 'r').read().strip()
         if mac_addr_type != '0':
