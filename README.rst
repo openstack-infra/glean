@@ -64,10 +64,19 @@ during install or image build.
 The startup environment will be modified as described above to
 configure any found interfaces.
 
-Differences to cloud-config?
-----------------------------
+Differences to cloud-init?
+--------------------------
 
-...
+Glean differs to `cloud-init` mainly in its very reduced dependency
+footprint.  In a dynamic CI environment such as OpenStack, many of the
+python dependencies for `cloud-init` can cause conflicts with packages
+or versions required for testing.
+
+Glean also better supports static IP allocation within config-drive,
+particuarly important within the Rackspace environment.
+
+More details
+------------
 
 * Free software: Apache license
 * Documentation: http://docs.openstack.org/infra/glean
