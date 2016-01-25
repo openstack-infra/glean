@@ -346,12 +346,15 @@ def get_sys_interfaces(interface, args):
     log.debug("Probing system interfaces")
     sys_root = os.path.join(args.root, 'sys/class/net')
 
+    ignored_interfaces = ('sit', 'tunl', 'bonding_master', 'teql',
+                          'ip6_vti', 'ip6tnl', 'bond')
     sys_interfaces = {}
     if interface is not None:
         log.debug("Only considering interface %s from arguments" % interface)
         interfaces = [interface]
     else:
-        interfaces = [f for f in os.listdir(sys_root) if f != 'lo']
+        interfaces = [f for f in os.listdir(sys_root)
+                      if not f.startswith(ignored_interfaces)]
     for iface in interfaces:
         mac_addr_type = open(
             '%s/%s/addr_assign_type' % (sys_root, iface), 'r').read().strip()
