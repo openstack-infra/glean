@@ -1,0 +1,12 @@
+### Write /etc/conf.d/net.eth0
+# Automatically generated, do not edit
+config_eth0="dhcp"
+mac_eth0="bc:76:4e:01:62:86"
+### Write /etc/conf.d/net.eth1
+# Automatically generated, do not edit
+config_eth1="dhcp"
+mac_eth1="bc:76:4e:05:7b:06"
+### Write /etc/conf.d/net.eth3
+# Automatically generated, do not edit
+config_eth3="dhcp"
+mac_eth3="bc:76:4e:12:a4:bb"

@@ -27,7 +27,7 @@ from glean import cmd
 sample_data_path = os.path.join(
     os.path.dirname(os.path.realpath(__file__)), 'fixtures')
 
-distros = ['Ubuntu', 'Debian', 'Fedora', 'RedHat', 'CentOS']
+distros = ['Ubuntu', 'Debian', 'Fedora', 'RedHat', 'CentOS', 'Gentoo']
 styles = ['hp', 'rax', 'liberty', 'nokey']
 
 built_scenarios = []
@@ -56,6 +56,8 @@ class TestGlean(base.BaseTestCase):
             if (args[0].startswith('/etc/network') or
                     args[0].startswith('/etc/sysconfig/network-scripts') or
                     args[0].startswith('/etc/resolv.conf') or
+                    args[0].startswith('/etc/conf.d') or
+                    args[0].startswith('/etc/init.d') or
                     args[0] in ('/etc/hostname', '/etc/hosts')):
                 try:
                     mock_handle = self.file_handle_mocks[args[0]]
@@ -95,6 +97,8 @@ class TestGlean(base.BaseTestCase):
                 sample_data_path, sample_prefix, path))
 
         self.useFixture(fixtures.MonkeyPatch('os.listdir', fake_listdir))
+        self.useFixture(fixtures.MonkeyPatch('os.symlink',
+                                             mock.Mock(return_value=0)))
         self.useFixture(fixtures.MonkeyPatch(
             'subprocess.check_output', mock.Mock()))
         self.useFixture(fixtures.MonkeyPatch('os.system',
@@ -108,12 +112,14 @@ class TestGlean(base.BaseTestCase):
                     sample_data_path, sample_prefix,
                     path[1:])
             if path in ['/etc/sysconfig/network-scripts/ifcfg-eth2',
-                        '/etc/network/interfaces.d/eth2.cfg']:
+                        '/etc/network/interfaces.d/eth2.cfg',
+                        '/etc/conf.d/net.eth2']:
                 # Pretend this file exists, we need to test skipping
                 # pre-existing config files
                 return True
             elif (path.startswith('/etc/sysconfig/network-scripts/') or
-                  path.startswith('/etc/network/interfaces.d/')):
+                  path.startswith('/etc/network/interfaces.d/') or
+                  path.startswith('/etc/conf.d/')):
                 # Don't check the host os's network config
                 return False
             return real_path_exists(path)
@@ -133,6 +139,7 @@ class TestGlean(base.BaseTestCase):
         self._patch_distro(distro)
 
         mock_call = mock.Mock()
+        call = mock.call
         mock_call.return_value = 0
         self.useFixture(fixtures.MonkeyPatch('subprocess.call', mock_call))
 
@@ -171,9 +178,13 @@ class TestGlean(base.BaseTestCase):
             meta_data = json.load(fh)
             hostname = meta_data['name']
 
-        mock_call.assert_called_once_with(['hostname', hostname])
-        self.file_handle_mocks['/etc/hostname'].write.assert_has_calls(
-            [mock.call(hostname), mock.call('\n')])
+        mock_call.assert_has_calls([call(['hostname', hostname])])
+        if distro.lower() is 'gentoo':
+            (self.file_handle_mocks['/etc/conf.d/hostname'].write.
+                assert_has_calls([mock.call(hostname)]))
+        else:
+            self.file_handle_mocks['/etc/hostname'].write.assert_has_calls(
+                [mock.call(hostname), mock.call('\n')])
 
         # Check hosts entry
         calls = [mock.call('127.0.0.1 %s\n' % hostname), ]

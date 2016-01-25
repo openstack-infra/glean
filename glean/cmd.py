@@ -133,6 +133,128 @@ def write_redhat_interfaces(interfaces, sys_interfaces):
     return files_to_write
 
 
+def _exists_gentoo_interface(name):
+    file_to_check = '/etc/conf.d/net.{name}'.format(name=name)
+    return os.path.exists(file_to_check)
+
+
+def _write_gentoo_interface(name, interface, vlans):
+    files_to_write = dict()
+    results = "# Automatically generated, do not edit\n"
+    if vlans:
+        results += """vlans_{name}="{vlans}"\n""".format(
+            # get the base interface name
+            name=name.split('_')[0],
+            vlans=' '.join(str(vlan) for vlan in vlans))
+    results += """config_{name}="{ip_address} netmask {netmask}"
+mac_{name}="{hwaddr}\"\n""".format(
+        name=name,
+        ip_address=interface['ip_address'],
+        netmask=interface['netmask'],
+        hwaddr=interface['mac_address']
+    )
+    routes = list()
+    for route in interface['routes']:
+        if route['network'] == '0.0.0.0' and route['netmask'] == '0.0.0.0':
+            # add default route if it exists
+            routes.append("""default via {gw}""".format(
+                name=name,
+                gw=route['gateway']
+            ))
+        else:
+            # add remaining static routes
+            routes.append("""{net} netmask {mask} via {gw}""".format(
+                net=route['network'],
+                mask=route['netmask'],
+                gw=route['gateway']
+            ))
+    if routes:
+        routes_string = '\n'.join(route for route in routes)
+        results += """routes_{name}="{routes}\"""".format(
+            name=name,
+            routes=routes_string
+            # routes='\n'.join(str(route) for route in routes)
+        )
+        results += '\n'
+    files_to_write['/etc/conf.d/net.{name}'.format(
+        name=name.split('_')[0])] = results
+    return files_to_write
+
+
+def _setup_gentoo_network_init(name, vlans):
+    for vlan in vlans:
+        interface_name = 'net.{name}.{vlan}'.format(
+            name=name.split('_')[0],
+            vlan=vlan)
+        if not os.path.islink('/etc/init.d/{name}'.format(
+                name=interface_name)):
+            os.symlink('/etc/init.d/net.lo',
+                       '/etc/init.d/{name}'.format(name=interface_name))
+            subprocess.call(['rc-update', 'add', 'net.{name}'.format(
+                name=interface_name)])
+    if not vlans:
+        if not os.path.islink('/etc/init.d/net.{name}'.format(name=name)):
+            os.symlink('/etc/init.d/net.lo',
+                       '/etc/init.d/net.{name}'.format(
+                           name=name.split('_')[0]))
+            subprocess.call(['rc-update',
+                             'add',
+                             'net.{name}'.format(name=name)])
+
+
+def _write_gentoo_dhcp(name, hwaddr, vlans):
+    filename = '/etc/conf.d/net.{name}'.format(name=name.split('_')[0])
+    results = "# Automatically generated, do not edit\n"
+    if vlans:
+        results += """vlans_{name}="{vlans}"\n""".format(
+            # get the base interface name
+            name=name.split('_')[0],
+            vlans=' '.join(str(vlan) for vlan in vlans))
+    results += """config_{name}="dhcp"
+mac_{name}="{hwaddr}"
+""".format(name=name, hwaddr=hwaddr)
+    return {filename: results}
+
+
+def write_gentoo_interfaces(interfaces, sys_interfaces):
+    files_to_write = dict()
+    # Sort the interfaces by id so that we'll have consistent output order
+    for iname, interface in sorted(
+            interfaces.items(), key=lambda x: x[1]['id']):
+        if interface['type'] == 'ipv6':
+            continue
+        if iname not in sys_interfaces:
+            continue
+        interface_name = sys_interfaces[iname]
+        vlans = list()
+        if 'vlan_id' in interface:
+            interface_name = "{0}_{1}".format(
+                interface_name, interface['vlan_id'])
+            vlans.append(interface['vlan_id'])
+        if interface['type'] == 'ipv4':
+            files_to_write.update(
+                _write_gentoo_interface(interface_name, interface, vlans))
+            _setup_gentoo_network_init(interface_name, vlans)
+        if interface['type'] == 'ipv4_dhcp':
+            files_to_write.update(
+                _write_gentoo_dhcp(
+                    interface_name, interface['mac_address'], vlans))
+            _setup_gentoo_network_init(interface_name, vlans)
+    for mac, iname in sorted(
+            sys_interfaces.items(), key=lambda x: x[1]):
+        if _exists_gentoo_interface(iname):
+            # This interface already has a config file, move on
+            log.debug("%s already has config file, skipping" % iname)
+            continue
+        if mac in interfaces:
+            # We have a config drive config, move on
+            log.debug("%s configured via config-drive" % mac)
+            continue
+        files_to_write.update(_write_gentoo_dhcp(iname, mac, []))
+        _setup_gentoo_network_init(iname, [])
+    return files_to_write
+
+
 def systemd_enable(service, args):
     log.debug("Enabling %s via systemctl" % service)
 
@@ -153,7 +275,7 @@ def _exists_debian_interface(name):
 def write_debian_interfaces(interfaces, sys_interfaces):
     eni_path = '/etc/network/interfaces'
     eni_d_path = eni_path + '.d'
-    files_to_write = {}
+    files_to_write = dict()
     files_to_write[eni_path] = "auto lo\niface lo inet loopback\n"
     files_to_write[eni_path] += "source /etc/network/interfaces.d/*.cfg\n"
     # Sort the interfaces by id so that we'll have consistent output order
@@ -290,7 +412,10 @@ def write_static_network_info(
         # /etc/sysconfig/network-scripts, so we have to ensure that
         # the LSB init script /etc/init.d/network gets started!
         systemd_enable('network.service', args)
-
+    elif args.distro in 'gentoo':
+        files_to_write.update(
+            write_gentoo_interfaces(interfaces, sys_interfaces)
+        )
     else:
         return False
 
@@ -462,9 +587,14 @@ def set_hostname_from_config_drive(args):
     if ret != 0:
         raise RuntimeError('Error setting hostname')
     else:
-        with open('/etc/hostname', 'w') as fh:
-            fh.write(hostname)
-            fh.write('\n')
+        # gentoo's hostname file is in a different location
+        if args.distro is 'gentoo':
+            with open('/etc/conf.d/hostname', 'w') as fh:
+                fh.write("hostname=\"{host}\"\n".format(host=hostname))
+        else:
+            with open('/etc/hostname', 'w') as fh:
+                fh.write(hostname)
+                fh.write('\n')
 
         # check short hostname and generate list for hosts
         hosts_to_add = [hostname, ]
