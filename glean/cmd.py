@@ -138,6 +138,12 @@ def _exists_gentoo_interface(name):
     return os.path.exists(file_to_check)
 
 
+def _enable_gentoo_interface(name):
+    log.debug('rc-update add {name} default'.format(name=name))
+    subprocess.call(['rc-update', 'add',
+                     'net.{name}'.format(name=name), 'default'])
+
+
 def _write_gentoo_interface(name, interface, vlans):
     files_to_write = dict()
     results = "# Automatically generated, do not edit\n"
@@ -186,20 +192,24 @@ def _setup_gentoo_network_init(name, vlans):
         interface_name = 'net.{name}.{vlan}'.format(
             name=name.split('_')[0],
             vlan=vlan)
+        log.debug('vlan {vlan} found, interface named {name}'.
+                  format(vlan=vlan, name=interface_name))
         if not os.path.islink('/etc/init.d/{name}'.format(
                 name=interface_name)):
+            log.debug('ln -s /etc/init.d/net.lo /etc/init.d/{name}'.
+                      format(name=interface_name))
             os.symlink('/etc/init.d/net.lo',
                        '/etc/init.d/{name}'.format(name=interface_name))
-            subprocess.call(['rc-update', 'add', 'net.{name}'.format(
-                name=interface_name)])
+            _enable_gentoo_interface(interface_name)
     if not vlans:
         if not os.path.islink('/etc/init.d/net.{name}'.format(name=name)):
+            log.debug('vlan not found, interface named {name}'.
+                      format(name=name))
+            log.debug('ln -s /etc/init.d/net.lo /etc/init.d/net.{name}'.
+                      format(name=name))
             os.symlink('/etc/init.d/net.lo',
-                       '/etc/init.d/net.{name}'.format(
-                           name=name.split('_')[0]))
-            subprocess.call(['rc-update',
-                             'add',
-                             'net.{name}'.format(name=name)])
+                       '/etc/init.d/net.{name}'.format(name=name))
+            _enable_gentoo_interface(name)
 
 
 def _write_gentoo_dhcp(name, hwaddr, vlans):
@@ -213,6 +223,7 @@ def _write_gentoo_dhcp(name, hwaddr, vlans):
     results += """config_{name}="dhcp"
 mac_{name}="{hwaddr}"
 """.format(name=name, hwaddr=hwaddr)
+    _enable_gentoo_interface(name)
     return {filename: results}
 
 
@@ -479,7 +490,7 @@ def get_sys_interfaces(interface, args):
     sys_root = os.path.join(args.root, 'sys/class/net')
 
     ignored_interfaces = ('sit', 'tunl', 'bonding_master', 'teql',
-                          'ip6_vti', 'ip6tnl', 'bond')
+                          'ip6_vti', 'ip6tnl', 'bond', 'lo')
     sys_interfaces = {}
     if interface is not None:
         log.debug("Only considering interface %s from arguments" % interface)

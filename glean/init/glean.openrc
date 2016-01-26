@@ -2,4 +2,14 @@
 # Copyright 1999-2016 Gentoo Foundation
 # $Id$
 
-command=/usr/bin/glean.sh
+description="basic instance setup"
+
+start() {
+  /usr/bin/glean.sh
+  eend 0
+}
+
+depend() {
+  need root
+  before net
+}

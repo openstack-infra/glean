@@ -29,7 +29,8 @@ function config_exists() {
     # Gentoo: return the value of grep -q INTERFACE in the config file, if it exists
     elif [[ -a /etc/gentoo-release ]]; then
         if [[ -a /etc/conf.d/net ]]; then
-            grep -q "${interface}" /etc/conf.d/net
+            # the '=' is needed so eth0 doesn't match on eth0.1
+            grep -q "${interface}=" /etc/conf.d/net* || return 1
         else
             return 1
         fi
@@ -45,7 +46,13 @@ function config_exists() {
 if blkid -t LABEL="config-2" ; then
     # Mount config drive
     mkdir -p /mnt/config
-    mount -o mode=0700 $(blkid -t LABEL="config-2" | cut -d ':' -f 1) /mnt/config || true
+    BLOCKDEV="$(blkid -L config-2)"
+    TYPE="$(blkid ${BLOCKDEV} -o udev | grep FS_TYPE | cut -d '=' -f 2)"
+    if [[ "${TYPE}" == 'vfat' ]]; then
+        mount -o umask=0077 "${BLOCKDEV}" /mnt/config || true
+    else
+        mount -o mode=0700 "${BLOCKDEV}" /mnt/config || true
+    fi
     glean --ssh --skip-network --hostname
 fi
 
@@ -54,12 +61,12 @@ if [ -f /usr/bin/dpkg ] ; then
 fi
 
 if [ -n "$INTERFACE" ]; then
-    glean --interface $INTERFACE
+    glean --interface "${INTERFACE}"
 else
     glean
 fi
 
-# gentoo needs manual interface restart as it doesn't have ifup and the like
+# gentoo needs manual interface start as it doesn't have ifup and the like
 if [[ -a /etc/gentoo-release ]]; then
-    find /etc/init.d/net.* ! -name net.lo -exec {} restart \;
+    find /etc/init.d/net.* ! -name net.lo -exec {} start \;
 fi
