@@ -16,6 +16,7 @@
 import argparse
 import logging
 import os
+import subprocess
 import sys
 
 log = logging.getLogger("glean-install")
@@ -94,6 +95,7 @@ def main():
     if os.path.exists('/etc/gentoo-release'):
         log.info('installing openrc services')
         install('glean.openrc', '/etc/init.d/glean')
+        subprocess.call(['rc-update', 'add', 'glean', 'default'])
     if os.path.exists('/usr/lib/systemd'):
         p = _find_gleansh_path()
 
