@@ -27,6 +27,10 @@ Specifically, it will mount the special block-device with label
 files within.  If appropriate network configuration is found, it will
 write out network configuration files.
 
+The format of the `network_info.json` file is documented `here
+<http://specs.openstack.org/openstack/nova-specs/specs/liberty/implemented/metadata-service-network-info.html#rest-api-impact>`__.
+Please note that glean does not implement every feature listed.
+
 If no network info is found there, available interfaces can be probed
 from `/sys/class/net` and any that appear to be up will be configured
 for use with DHCP.
