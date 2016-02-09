@@ -65,8 +65,3 @@ if [ -n "$INTERFACE" ]; then
 else
     glean
 fi
-
-# gentoo needs manual interface start as it doesn't have ifup and the like
-if [[ -a /etc/gentoo-release ]]; then
-    find /etc/init.d/net.* ! -name net.lo -exec {} start \;
-fi

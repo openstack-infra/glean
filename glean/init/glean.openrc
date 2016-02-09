@@ -10,6 +10,6 @@ start() {
 }
 
 depend() {
-  need root
+  need root localmount
   before net
 }
