@@ -148,7 +148,7 @@ def _write_gentoo_interface(name, interface, vlans):
     files_to_write = dict()
     results = "# Automatically generated, do not edit\n"
     if vlans:
-        results += """vlans_{name}="{vlans}"\n""".format(
+        results += 'vlans_{name}="{vlans}"\n'.format(
             # get the base interface name
             name=name.split('_')[0],
             vlans=' '.join(str(vlan) for vlan in vlans))
@@ -163,20 +163,20 @@ mac_{name}="{hwaddr}\"\n""".format(
     for route in interface['routes']:
         if route['network'] == '0.0.0.0' and route['netmask'] == '0.0.0.0':
             # add default route if it exists
-            routes.append("""default via {gw}""".format(
+            routes.append('default via {gw}'.format(
                 name=name,
                 gw=route['gateway']
             ))
         else:
             # add remaining static routes
-            routes.append("""{net} netmask {mask} via {gw}""".format(
+            routes.append('{net} netmask {mask} via {gw}'.format(
                 net=route['network'],
                 mask=route['netmask'],
                 gw=route['gateway']
             ))
     if routes:
         routes_string = '\n'.join(route for route in routes)
-        results += """routes_{name}="{routes}\"""".format(
+        results += 'routes_{name}="{routes}"'.format(
             name=name,
             routes=routes_string
             # routes='\n'.join(str(route) for route in routes)
@@ -216,7 +216,7 @@ def _write_gentoo_dhcp(name, hwaddr, vlans):
     filename = '/etc/conf.d/net.{name}'.format(name=name.split('_')[0])
     results = "# Automatically generated, do not edit\n"
     if vlans:
-        results += """vlans_{name}="{vlans}"\n""".format(
+        results += 'vlans_{name}="{vlans}"\n'.format(
             # get the base interface name
             name=name.split('_')[0],
             vlans=' '.join(str(vlan) for vlan in vlans))
