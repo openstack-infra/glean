@@ -71,6 +71,12 @@
       "type": "ipv4_dhcp",
       "link": "vlan0",
       "id": "network4"
+    },
+    {
+      "network_id": "55555555-5555-5555-5555-555555555555",
+      "type": "ipv4_dhcp",
+      "link": "vlan1",
+      "id": "network5"
     }
   ],
   "links": [
@@ -114,6 +120,13 @@
       "vlan_link": "ethwithvlan",
       "vlan_id": 25,
       "vlan_mac_address": "BC:76:4E:12:a4:bc"
+    },
+    {
+      "id": "vlan1",
+      "type": "vlan",
+      "vlan_link": "ethwithvlan",
+      "vlan_id": 26,
+      "vlan_mac_address": "BC:76:4E:12:a4:bd"
     }
   ]
 }

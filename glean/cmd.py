@@ -104,14 +104,19 @@ def write_redhat_interfaces(interfaces, sys_interfaces):
             interfaces.items(), key=lambda x: x[1]['id']):
         if interface['type'] == 'ipv6':
             continue
-        if iname not in sys_interfaces:
+        raw_mac = interface.get('link_mac', interface['mac_address'])
+        if raw_mac not in sys_interfaces:
             continue
-        interface_name = sys_interfaces[iname]
+
         has_vlan = False
         if 'vlan_id' in interface:
+            vlan_raw_device = sys_interfaces[interface['link_mac']]
             interface_name = "{0}.{1}".format(
-                interface_name, interface['vlan_id'])
+                vlan_raw_device, interface['vlan_id'])
             has_vlan = True
+        else:
+            interface_name = sys_interfaces[interface['mac_address']]
+
         if interface['type'] == 'ipv4':
             files_to_write.update(
                 _write_rh_interface(interface_name, interface, has_vlan))
@@ -125,7 +130,10 @@ def write_redhat_interfaces(interfaces, sys_interfaces):
             # This interface already has a config file, move on
             log.debug("%s already has config file, skipping" % iname)
             continue
-        if mac in interfaces:
+        inter_macs = [intf['mac_address'] for intf in interfaces.values()]
+        link_macs = [intf.get('link_mac') for intf in interfaces.values()
+                     if 'vlan_id' in interface]
+        if mac in inter_macs or mac in link_macs:
             # We have a config drive config, move on
             log.debug("%s configured via config-drive" % mac)
             continue
@@ -144,124 +152,126 @@ def _enable_gentoo_interface(name):
                      'net.{name}'.format(name=name), 'default'])
 
 
-def _write_gentoo_interface(name, interface, vlans):
+def _write_gentoo_interface(name, interfaces):
     files_to_write = dict()
-    results = "# Automatically generated, do not edit\n"
-    if vlans:
-        results += 'vlans_{name}="{vlans}"\n'.format(
-            # get the base interface name
-            name=name.split('_')[0],
-            vlans=' '.join(str(vlan) for vlan in vlans))
-    results += """config_{name}="{ip_address} netmask {netmask}"
+    results = ""
+    vlans = []
+    for interface in interfaces:
+        iname = name
+        if 'vlan_id' in interface:
+            vlans.append(interface['vlan_id'])
+            iname = "%s_%s" % (iname, interface['vlan_id'])
+        if interface['type'] == 'ipv4':
+            results += """config_{name}="{ip_address} netmask {netmask}"
 mac_{name}="{hwaddr}\"\n""".format(
-        name=name,
-        ip_address=interface['ip_address'],
-        netmask=interface['netmask'],
-        hwaddr=interface['mac_address']
-    )
-    routes = list()
-    for route in interface['routes']:
-        if route['network'] == '0.0.0.0' and route['netmask'] == '0.0.0.0':
-            # add default route if it exists
-            routes.append('default via {gw}'.format(
-                name=name,
-                gw=route['gateway']
-            ))
+                name=iname,
+                ip_address=interface['ip_address'],
+                netmask=interface['netmask'],
+                hwaddr=interface['mac_address']
+            )
+            routes = list()
+            for route in interface['routes']:
+                if (route['network'] == '0.0.0.0' and
+                        route['netmask'] == '0.0.0.0'):
+                    # add default route if it exists
+                    routes.append('default via {gw}'.format(
+                        name=name,
+                        gw=route['gateway']
+                    ))
+                else:
+                    # add remaining static routes
+                    routes.append('{net} netmask {mask} via {gw}'.format(
+                        net=route['network'],
+                        mask=route['netmask'],
+                        gw=route['gateway']
+                    ))
+            if routes:
+                routes_string = '\n'.join(route for route in routes)
+                results += 'routes_{name}="{routes}"'.format(
+                    name=name,
+                    routes=routes_string
+                    # routes='\n'.join(str(route) for route in routes)
+                )
+                results += '\n'
         else:
-            # add remaining static routes
-            routes.append('{net} netmask {mask} via {gw}'.format(
-                net=route['network'],
-                mask=route['netmask'],
-                gw=route['gateway']
-            ))
-    if routes:
-        routes_string = '\n'.join(route for route in routes)
-        results += 'routes_{name}="{routes}"'.format(
+            results += """config_{name}="dhcp"
+mac_{name}="{hwaddr}"
+""".format(name=iname, hwaddr=interface['mac_address'])
+            _enable_gentoo_interface(iname)
+
+    full_results = "# Automatically generated, do not edit\n"
+    if vlans:
+        full_results += 'vlans_{name}="{vlans}"\n'.format(
             name=name,
-            routes=routes_string
-            # routes='\n'.join(str(route) for route in routes)
-        )
-        results += '\n'
-    files_to_write['/etc/conf.d/net.{name}'.format(
-        name=name.split('_')[0])] = results
+            vlans=' '.join(str(vlan) for vlan in vlans))
+    full_results += results
+
+    files_to_write['/etc/conf.d/net.{name}'.format(name=name)] = full_results
     return files_to_write
 
 
-def _setup_gentoo_network_init(name, vlans):
-    for vlan in vlans:
-        interface_name = 'net.{name}.{vlan}'.format(
-            name=name.split('_')[0],
-            vlan=vlan)
-        log.debug('vlan {vlan} found, interface named {name}'.
-                  format(vlan=vlan, name=interface_name))
-        if not os.path.islink('/etc/init.d/{name}'.format(
-                name=interface_name)):
-            log.debug('ln -s /etc/init.d/net.lo /etc/init.d/{name}'.
-                      format(name=interface_name))
-            os.symlink('/etc/init.d/net.lo',
-                       '/etc/init.d/{name}'.format(name=interface_name))
-            _enable_gentoo_interface(interface_name)
-    if not vlans:
-        if not os.path.islink('/etc/init.d/net.{name}'.format(name=name)):
-            log.debug('vlan not found, interface named {name}'.
-                      format(name=name))
-            log.debug('ln -s /etc/init.d/net.lo /etc/init.d/net.{name}'.
-                      format(name=name))
-            os.symlink('/etc/init.d/net.lo',
-                       '/etc/init.d/net.{name}'.format(name=name))
-            _enable_gentoo_interface(name)
+def _setup_gentoo_network_init(sys_interface, interfaces):
+    for interface in interfaces:
+        interface_name = '{name}'.format(name=sys_interface)
+        if 'vlan_id' in interface:
+            interface_name += ".{vlan}".format(
+                vlan=interface['vlan_id'])
+            log.debug('vlan {vlan} found, interface named {name}'.
+                      format(vlan=interface['vlan_id'], name=interface_name))
+        _create_gentoo_net_symlink_and_enable(interface_name)
+    if not interfaces:
+        _create_gentoo_net_symlink_and_enable(sys_interface)
 
 
-def _write_gentoo_dhcp(name, hwaddr, vlans):
-    filename = '/etc/conf.d/net.{name}'.format(name=name.split('_')[0])
-    results = "# Automatically generated, do not edit\n"
-    if vlans:
-        results += 'vlans_{name}="{vlans}"\n'.format(
-            # get the base interface name
-            name=name.split('_')[0],
-            vlans=' '.join(str(vlan) for vlan in vlans))
-    results += """config_{name}="dhcp"
-mac_{name}="{hwaddr}"
-""".format(name=name, hwaddr=hwaddr)
-    _enable_gentoo_interface(name)
-    return {filename: results}
+def _create_gentoo_net_symlink_and_enable(interface_name):
+    file_path = '/etc/init.d/net.{name}'.format(name=interface_name)
+    if not os.path.islink(file_path):
+        log.debug('ln -s /etc/init.d/net.lo {file_path}'.
+                  format(file_path=file_path))
+        os.symlink('/etc/init.d/net.lo',
+                   '{file_path}'.format(file_path=file_path))
+        _enable_gentoo_interface(interface_name)
 
 
 def write_gentoo_interfaces(interfaces, sys_interfaces):
     files_to_write = dict()
+    gen_intfs = {}
     # Sort the interfaces by id so that we'll have consistent output order
     for iname, interface in sorted(
             interfaces.items(), key=lambda x: x[1]['id']):
         if interface['type'] == 'ipv6':
             continue
-        if iname not in sys_interfaces:
+        raw_mac = interface.get('link_mac', interface['mac_address'])
+        if raw_mac not in sys_interfaces:
             continue
-        interface_name = sys_interfaces[iname]
-        vlans = list()
+
         if 'vlan_id' in interface:
-            interface_name = "{0}_{1}".format(
-                interface_name, interface['vlan_id'])
-            vlans.append(interface['vlan_id'])
-        if interface['type'] == 'ipv4':
-            files_to_write.update(
-                _write_gentoo_interface(interface_name, interface, vlans))
-            _setup_gentoo_network_init(interface_name, vlans)
-        if interface['type'] == 'ipv4_dhcp':
-            files_to_write.update(
-                _write_gentoo_dhcp(
-                    interface_name, interface['mac_address'], vlans))
-            _setup_gentoo_network_init(interface_name, vlans)
+            if interface['link_mac'] not in gen_intfs:
+                gen_intfs[interface['link_mac']] = []
+            gen_intfs[interface['link_mac']].append(interface)
+        else:
+            if interface['mac_address'] not in gen_intfs:
+                gen_intfs[interface['mac_address']] = []
+            gen_intfs[interface['mac_address']].append(interface)
+
+    for raw_mac, interfaces in gen_intfs.items():
+        interface_name = sys_interfaces[raw_mac]
+        files_to_write.update(
+            _write_gentoo_interface(interface_name, interfaces))
+        _setup_gentoo_network_init(interface_name, interfaces)
+
     for mac, iname in sorted(
             sys_interfaces.items(), key=lambda x: x[1]):
         if _exists_gentoo_interface(iname):
             # This interface already has a config file, move on
             log.debug("%s already has config file, skipping" % iname)
             continue
-        if mac in interfaces:
+        if mac in gen_intfs:
             # We have a config drive config, move on
             log.debug("%s configured via config-drive" % mac)
             continue
-        files_to_write.update(_write_gentoo_dhcp(iname, mac, []))
+        interface = {'type': 'ipv4_dhcp', 'mac_address': mac}
+        files_to_write.update(_write_gentoo_interface(iname, [interface]))
         _setup_gentoo_network_init(iname, [])
     return files_to_write
 
@@ -290,18 +300,18 @@ def write_debian_interfaces(interfaces, sys_interfaces):
     files_to_write[eni_path] = "auto lo\niface lo inet loopback\n"
     files_to_write[eni_path] += "source /etc/network/interfaces.d/*.cfg\n"
     # Sort the interfaces by id so that we'll have consistent output order
-    for iname, interface in sorted(
-            interfaces.items(), key=lambda x: x[1]['id']):
-        if iname not in sys_interfaces:
+    for iname, interface in interfaces.items():
+        raw_mac = interface.get('link_mac', interface['mac_address'])
+        if raw_mac not in sys_interfaces:
             continue
-        interface = interfaces[iname]
-        interface_name = sys_interfaces[iname]
-        vlan_raw_device = None
 
+        vlan_raw_device = None
         if 'vlan_id' in interface:
-            vlan_raw_device = interface_name
+            vlan_raw_device = sys_interfaces[interface['link_mac']]
             interface_name = "{0}.{1}".format(vlan_raw_device,
                                               interface['vlan_id'])
+        else:
+            interface_name = sys_interfaces[interface['mac_address']]
 
         if _exists_debian_interface(interface_name):
             continue
@@ -313,6 +323,8 @@ def write_debian_interfaces(interfaces, sys_interfaces):
             result += "iface {0} inet dhcp\n".format(interface_name)
             if vlan_raw_device is not None:
                 result += "    vlan-raw-device {0}\n".format(vlan_raw_device)
+                result += "    hw-mac-address {0}\n".format(
+                    interface['mac_address'])
             files_to_write[iface_path] = result
             continue
         if interface['type'] == 'ipv6':
@@ -346,7 +358,10 @@ def write_debian_interfaces(interfaces, sys_interfaces):
         if _exists_debian_interface(iname):
             # This interface already has a config file, move on
             continue
-        if mac in interfaces:
+        inter_macs = [intf['mac_address'] for intf in interfaces.values()]
+        link_macs = [intf.get('link_mac') for intf in interfaces.values()
+                     if 'vlan_id' in interface]
+        if mac in inter_macs or mac in link_macs:
             # We have a config drive config, move on
             continue
         result = "auto {0}\n".format(iname)
@@ -369,34 +384,40 @@ def get_config_drive_interfaces(net):
         log.debug("No config-drive interfaces defined")
         return interfaces
 
-    # tmp_ifaces is a dict keyed on net id
-    tmp_ifaces = {}
-    tmp_links = {}
+    networks = {}
     for network in net['networks']:
-        tmp_ifaces[network['link']] = network
+        networks[network['link']] = network
+
+    vlans = {}
+    phys = {}
+    bonds = {}
     for link in net['links']:
-        tmp_links[link['id']] = link
-    keys_to_del = []
-    for link in tmp_links.values():
         if link['type'] == 'vlan':
-            keys_to_del.append(link['vlan_link'])
-            new_link = dict(tmp_links.get(link['vlan_link'], {}))
-            new_link.update(link)
-            link.update(new_link)
+            vlans[link['id']] = link
+        elif link['type'] == 'bond':
+            bonds[link['id']] = link
+        else:
+            phys[link['id']] = link
+
+    for link in vlans.values():
+        if link['vlan_link'] in phys:
+            vlan_link = phys[link['vlan_link']]
+        elif link['vlan_link'] in bonds:
+            vlan_link = bonds[link['vlan_link']]
+        link['link_mac'] = vlan_link['ethernet_mac_address'].lower()
         link['mac_address'] = link.get(
-            'ethernet_mac_address', link.get('vlan_mac_address'))
-        for old_key in ('ethernet_mac_address', 'vlan_mac_address'):
-            if old_key in link:
-                del link[old_key]
-    for key in keys_to_del:
-        del tmp_links[key]
-    for link in tmp_links.values():
-        tmp_ifaces[link['id']]['mac_address'] = link['mac_address']
-        if 'vlan_id' in link:
-            tmp_ifaces[link['id']]['vlan_id'] = link['vlan_id']
-    for k, v in tmp_ifaces.items():
-        v['link'] = k
-        interfaces[v['mac_address'].lower()] = v
+            'vlan_mac_address', vlan_link['ethernet_mac_address']).lower()
+
+    for link in phys.values():
+        link['mac_address'] = link.get('ethernet_mac_address').lower()
+
+    for i, network in networks.items():
+        link = vlans.get(i, phys.get(i, bonds.get(i)))
+        if not link:
+            continue
+        link.update(network)
+        interfaces[i] = link
+
     return interfaces
 
 
@@ -523,12 +544,16 @@ def get_network_info(args):
     """
     config_drive = os.path.join(args.root, 'mnt/config')
     network_info_file = '%s/openstack/latest/network_info.json' % config_drive
+    network_data_file = '%s/openstack/latest/network_data.json' % config_drive
     vendor_data_file = '%s/openstack/latest/vendor_data.json' % config_drive
 
     network_info = {}
     if os.path.exists(network_info_file):
         log.debug("Found network_info file %s" % network_info_file)
         network_info = json.load(open(network_info_file))
+    if os.path.exists(network_data_file):
+        log.debug("Found network_info file %s" % network_data_file)
+        network_info = json.load(open(network_data_file))
     elif os.path.exists(vendor_data_file):
         log.debug("Found vendor_data_file file %s" % vendor_data_file)
         vendor_data = json.load(open(vendor_data_file))
