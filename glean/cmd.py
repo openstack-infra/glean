@@ -571,11 +571,21 @@ def write_ssh_keys(args):
         return 0
 
     keys_to_write = []
+
+    # if we have keys already there, we want to preserve them
+    if os.path.exists('/root/.ssh/authorized_keys'):
+        with open('/root/.ssh/authorized_keys', 'r') as fk:
+            for line in fk:
+                keys_to_write.append(line.strip())
     for (name, key) in meta_data['public_keys'].items():
-        keys_to_write.append(
-            "# Injected key {name} by keypair extension".format(
-                name=name))
-        keys_to_write.append(key)
+        key_title = "# Injected key {name} by keypair extension".format(
+            name=name)
+        if key_title not in keys_to_write:
+            keys_to_write.append(key_title)
+
+        if key not in keys_to_write:
+            keys_to_write.append(key)
+
     files_to_write = {
         '/root/.ssh/authorized_keys': '\n'.join(keys_to_write) + '\n',
     }
