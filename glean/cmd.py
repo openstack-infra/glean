@@ -515,16 +515,12 @@ def get_sys_interfaces(interface, args):
     return sys_interfaces
 
 
-def write_network_info_from_config_drive(args):
-    """Write network info from config-drive.
+def get_network_info(args):
+    """Retrieves network info from config-drive.
 
     If there is no meta_data.json in config-drive, it means that there
     is no config drive mounted- which means we know nothing.
-
-    Returns False on any issue, which will cause the writing of
-    DHCP network files.
     """
-
     config_drive = os.path.join(args.root, 'mnt/config')
     network_info_file = '%s/openstack/latest/network_info.json' % config_drive
     vendor_data_file = '%s/openstack/latest/vendor_data.json' % config_drive
@@ -545,6 +541,21 @@ def write_network_info_from_config_drive(args):
     if not network_info:
         log.debug("Found no network_info in config-drive!  "
                   "Asusming DHCP interfaces")
+
+    return network_info
+
+
+def write_network_info_from_config_drive(args):
+    """Write network info from config-drive.
+
+    If there is no meta_data.json in config-drive, it means that there
+    is no config drive mounted- which means we know nothing.
+
+    Returns False on any issue, which will cause the writing of
+    DHCP network files.
+    """
+
+    network_info = get_network_info(args)
 
     dns = write_dns_info(get_dns_from_config_drive(network_info))
     interfaces = get_config_drive_interfaces(network_info)
@@ -632,15 +643,30 @@ def set_hostname_from_config_drive(args):
                 fh.write(hostname)
                 fh.write('\n')
 
+        # generate the lists of hosts and ips
+        hosts_to_add = {'localhost': '127.0.0.1'}
+
+        # get information on the network
+        hostname_ip = '127.0.1.1'
+        network_info = get_network_info(args)
+        if network_info:
+            interfaces = get_config_drive_interfaces(network_info)
+            key = sorted(interfaces.keys())[0]
+            interface = interfaces[key]
+
+            if interface and 'ip_address' in interface:
+                hostname_ip = interface['ip_address']
+
         # check short hostname and generate list for hosts
-        hosts_to_add = ['localhost', hostname, ]
+        hosts_to_add[hostname] = hostname_ip
         short_hostname = hostname.split('.')[0]
         if short_hostname != hostname:
-            hosts_to_add.append(short_hostname)
+            hosts_to_add[short_hostname] = hostname_ip
 
         for host in hosts_to_add:
+            host_value = hosts_to_add[host]
             # See if we already have a hosts entry for hostname
-            prog = re.compile('^127.0.0.1 .*%s\n' % host)
+            prog = re.compile('^%s .*%s\n' % (host_value, host))
             match = None
             if os.path.isfile('/etc/hosts'):
                 with open('/etc/hosts') as fh:
@@ -649,7 +675,7 @@ def set_hostname_from_config_drive(args):
             # Write out a hosts entry for hostname
             if match is None:
                 with open('/etc/hosts', 'a+') as fh:
-                    fh.write(u'127.0.0.1 %s\n' % host)
+                    fh.write(u'%s %s\n' % (host_value, host))
 
 
 def main():

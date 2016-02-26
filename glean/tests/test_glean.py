@@ -29,6 +29,10 @@ sample_data_path = os.path.join(
 
 distros = ['Ubuntu', 'Debian', 'Fedora', 'RedHat', 'CentOS', 'Gentoo']
 styles = ['hp', 'rax', 'liberty', 'nokey']
+ips = {'hp': '127.0.1.1',
+       'rax': '23.253.229.154',
+       'liberty': '23.253.229.154',
+       'nokey': '127.0.1.1'}
 
 built_scenarios = []
 for distro in distros:
@@ -187,10 +191,11 @@ class TestGlean(base.BaseTestCase):
                 [mock.call(hostname), mock.call('\n')])
 
         # Check hosts entry
-        calls = [mock.call('127.0.0.1 %s\n' % hostname), ]
+        hostname_ip = ips[provider]
+        calls = [mock.call('%s %s\n' % (hostname_ip, hostname)), ]
         short_hostname = hostname.split('.')[0]
         if hostname != short_hostname:
-            calls.append(mock.call('127.0.0.1 %s\n' % short_hostname))
+            calls.append(mock.call('%s %s\n' % (hostname_ip, short_hostname)))
 
         self.file_handle_mocks['/etc/hosts'].write.assert_has_calls(
             calls, any_order=True)
