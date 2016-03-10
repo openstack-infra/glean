@@ -196,4 +196,5 @@ class TestGlean(base.BaseTestCase):
             calls, any_order=True)
 
     def test_glean(self):
-        self._assert_distro_provider(self.distro, self.style)
+        with mock.patch('glean.systemlock.Lock'):
+            self._assert_distro_provider(self.distro, self.style)
