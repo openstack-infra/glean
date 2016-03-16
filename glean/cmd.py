@@ -40,7 +40,7 @@ def _exists_rh_interface(name):
     return os.path.exists(file_to_check)
 
 
-def _write_rh_interface(name, interface, has_vlan):
+def _write_rh_interface(name, interface):
     files_to_write = dict()
     results = """# Automatically generated, do not edit
 DEVICE={name}
@@ -57,7 +57,7 @@ NM_CONTROLLED=no
         netmask=interface['netmask'],
 
     )
-    if has_vlan:
+    if 'vlan_id' in interface:
         results += "VLAN=yes\n"
     routes = []
     for route in interface['routes']:
@@ -82,7 +82,7 @@ NM_CONTROLLED=no
     return files_to_write
 
 
-def _write_rh_dhcp(name, hwaddr, has_vlan):
+def _write_rh_dhcp(name, interface):
     filename = '/etc/sysconfig/network-scripts/ifcfg-{name}'.format(name=name)
     results = """# Automatically generated, do not edit
 DEVICE={name}
@@ -91,9 +91,27 @@ HWADDR={hwaddr}
 ONBOOT=yes
 NM_CONTROLLED=no
 TYPE=Ethernet
-""".format(name=name, hwaddr=hwaddr)
-    if has_vlan:
+""".format(name=name, hwaddr=interface['mac_address'])
+    if 'vlan_id' in interface:
         results += "VLAN=yes\n"
+    return {filename: results}
+
+
+def _write_rh_manual(name, interface):
+    filename = '/etc/sysconfig/network-scripts/ifcfg-{name}'.format(name=name)
+    results = """# Automatically generated, do not edit
+DEVICE={name}
+BOOTPROTO=none
+HWADDR={hwaddr}
+ONBOOT=yes
+NM_CONTROLLED=no
+TYPE=Ethernet
+""".format(name=name, hwaddr=interface['mac_address'])
+    if 'vlan_id' in interface:
+        results += "VLAN=yes\n"
+    if 'bond_master' in interface:
+        results += "SLAVE=yes\n"
+        results += "MASTER={0}\n".format(interface['bond_master'])
     return {filename: results}
 
 
@@ -104,26 +122,32 @@ def write_redhat_interfaces(interfaces, sys_interfaces):
             interfaces.items(), key=lambda x: x[1]['id']):
         if interface['type'] == 'ipv6':
             continue
-        raw_mac = interface.get('link_mac', interface['mac_address'])
-        if raw_mac not in sys_interfaces:
-            continue
+        raw_macs = interface.get('raw_macs', [interface['mac_address']])
+        for mac in raw_macs:
+            if mac not in sys_interfaces:
+                continue
 
-        has_vlan = False
         if 'vlan_id' in interface:
-            vlan_raw_device = sys_interfaces[interface['link_mac']]
+            if len(raw_macs) == 1:
+                vlan_raw_device = sys_interfaces.get(raw_macs[0])
+            else:
+                vlan_raw_device = interface['vlan_link']
             interface_name = "{0}.{1}".format(
                 vlan_raw_device, interface['vlan_id'])
-            has_vlan = True
+        elif 'bond_mode' in interface:
+            interface_name = iname
         else:
             interface_name = sys_interfaces[interface['mac_address']]
 
         if interface['type'] == 'ipv4':
             files_to_write.update(
-                _write_rh_interface(interface_name, interface, has_vlan))
+                _write_rh_interface(interface_name, interface))
         if interface['type'] == 'ipv4_dhcp':
             files_to_write.update(
-                _write_rh_dhcp(
-                    interface_name, interface['mac_address'], has_vlan))
+                _write_rh_dhcp(interface_name, interface))
+        if interface['type'] == 'manual':
+            files_to_write.update(
+                _write_rh_manual(interface_name, interface))
     for mac, iname in sorted(
             sys_interfaces.items(), key=lambda x: x[1]):
         if _exists_rh_interface(iname):
@@ -137,7 +161,7 @@ def write_redhat_interfaces(interfaces, sys_interfaces):
             # We have a config drive config, move on
             log.debug("%s configured via config-drive" % mac)
             continue
-        files_to_write.update(_write_rh_dhcp(iname, mac, False))
+        files_to_write.update(_write_rh_dhcp(iname, {'mac_address': mac}))
     return files_to_write
 
 
@@ -193,11 +217,21 @@ mac_{name}="{hwaddr}\"\n""".format(
                     # routes='\n'.join(str(route) for route in routes)
                 )
                 results += '\n'
+        elif interface['type'] == 'manual':
+            results += """config_{name}="null"
+mac_{name}="{hwaddr}"
+""".format(name=iname, hwaddr=interface['mac_address'])
+            _enable_gentoo_interface(iname)
         else:
             results += """config_{name}="dhcp"
 mac_{name}="{hwaddr}"
 """.format(name=iname, hwaddr=interface['mac_address'])
             _enable_gentoo_interface(iname)
+        if 'bond_mode' in interface:
+            slaves = ' '.join(interface['slaves'])
+            results += """slaves_{name}="{slaves}"
+mode_{name}="{mode}"
+""".format(name=iname, slaves=slaves, mode=interface['bond_mode'])
 
     full_results = "# Automatically generated, do not edit\n"
     if vlans:
@@ -218,6 +252,8 @@ def _setup_gentoo_network_init(sys_interface, interfaces):
                 vlan=interface['vlan_id'])
             log.debug('vlan {vlan} found, interface named {name}'.
                       format(vlan=interface['vlan_id'], name=interface_name))
+        if 'bond_master' in interface:
+            continue
         _create_gentoo_net_symlink_and_enable(interface_name)
     if not interfaces:
         _create_gentoo_net_symlink_and_enable(sys_interface)
@@ -241,24 +277,35 @@ def write_gentoo_interfaces(interfaces, sys_interfaces):
             interfaces.items(), key=lambda x: x[1]['id']):
         if interface['type'] == 'ipv6':
             continue
-        raw_mac = interface.get('link_mac', interface['mac_address'])
-        if raw_mac not in sys_interfaces:
-            continue
+        raw_macs = interface.get('raw_macs', [interface['mac_address']])
+        for mac in raw_macs:
+            if mac not in sys_interfaces:
+                continue
 
-        if 'vlan_id' in interface:
-            if interface['link_mac'] not in gen_intfs:
-                gen_intfs[interface['link_mac']] = []
-            gen_intfs[interface['link_mac']].append(interface)
+        if 'bond_mode' in interface:
+            interface['slaves'] = [
+                sys_interfaces[mac] for mac in interface['raw_macs']]
+
+        if 'raw_macs' in interface:
+            key = tuple(interface['raw_macs'])
+            if key not in gen_intfs:
+                gen_intfs[key] = []
+            gen_intfs[key].append(interface)
         else:
-            if interface['mac_address'] not in gen_intfs:
-                gen_intfs[interface['mac_address']] = []
-            gen_intfs[interface['mac_address']].append(interface)
+            key = (interface['mac_address'],)
+            if key not in gen_intfs:
+                gen_intfs[key] = []
+            gen_intfs[key].append(interface)
 
-    for raw_mac, interfaces in gen_intfs.items():
-        interface_name = sys_interfaces[raw_mac]
+    for raw_macs, interfs in gen_intfs.items():
+        if len(raw_macs) == 1:
+            interface_name = sys_interfaces[raw_macs[0]]
+        else:
+            interface_name = next(
+                intf['id'] for intf in interfs if 'bond_mode' in intf)
         files_to_write.update(
-            _write_gentoo_interface(interface_name, interfaces))
-        _setup_gentoo_network_init(interface_name, interfaces)
+            _write_gentoo_interface(interface_name, interfs))
+        _setup_gentoo_network_init(interface_name, interfs)
 
     for mac, iname in sorted(
             sys_interfaces.items(), key=lambda x: x[1]):
@@ -266,7 +313,7 @@ def write_gentoo_interfaces(interfaces, sys_interfaces):
             # This interface already has a config file, move on
             log.debug("%s already has config file, skipping" % iname)
             continue
-        if mac in gen_intfs:
+        if (mac,) in gen_intfs:
             # We have a config drive config, move on
             log.debug("%s configured via config-drive" % mac)
             continue
@@ -301,15 +348,21 @@ def write_debian_interfaces(interfaces, sys_interfaces):
     files_to_write[eni_path] += "source /etc/network/interfaces.d/*.cfg\n"
     # Sort the interfaces by id so that we'll have consistent output order
     for iname, interface in interfaces.items():
-        raw_mac = interface.get('link_mac', interface['mac_address'])
-        if raw_mac not in sys_interfaces:
-            continue
+        raw_macs = interface.get('raw_macs', [interface['mac_address']])
+        for mac in raw_macs:
+            if mac not in sys_interfaces:
+                continue
 
         vlan_raw_device = None
         if 'vlan_id' in interface:
-            vlan_raw_device = sys_interfaces[interface['link_mac']]
+            if len(raw_macs) == 1:
+                vlan_raw_device = sys_interfaces.get(raw_macs[0])
+            else:
+                vlan_raw_device = interface['vlan_link']
             interface_name = "{0}.{1}".format(vlan_raw_device,
                                               interface['vlan_id'])
+        elif 'bond_mode' in interface:
+            interface_name = iname
         else:
             interface_name = sys_interfaces[interface['mac_address']]
 
@@ -325,12 +378,45 @@ def write_debian_interfaces(interfaces, sys_interfaces):
                 result += "    vlan-raw-device {0}\n".format(vlan_raw_device)
                 result += "    hw-mac-address {0}\n".format(
                     interface['mac_address'])
+            if 'bond_mode' in interface:
+                if interface['mac_address']:
+                    result += "    hwaddress {0}\n".format(
+                        interface['mac_address'])
+                result += "    bond-mode {0}\n".format(interface['bond_mode'])
+                result += "    bond-miimon {0}\n".format(
+                    interface['bond_miimon'])
+                slave_devices = [sys_interfaces[mac]
+                                 for mac in interface['raw_macs']]
+                slaves = ' '.join(slave_devices)
+                result += "    bond-slaves {0}\n".format(slaves)
             files_to_write[iface_path] = result
             continue
+
+        if interface['type'] == 'manual':
+            result = "auto {0}\n".format(interface_name)
+            result += "iface {0} inet manual\n".format(interface_name)
+            if 'bond_master' in interface:
+                result += "    bond-master {0}\n".format(
+                    interface['bond_master'])
+            if 'bond_mode' in interface:
+                if interface['mac_address']:
+                    result += "    hwaddress {0}\n".format(
+                        interface['mac_address'])
+                result += "    bond-mode {0}\n".format(interface['bond_mode'])
+                result += "    bond-miimon {0}\n".format(
+                    interface['bond_miimon'])
+                slave_devices = [sys_interfaces[mac]
+                                 for mac in interface['raw_macs']]
+                slaves = ' '.join(slave_devices)
+                result += "    bond-slaves {0}\n".format(slaves)
+            files_to_write[iface_path] = result
+            continue
+
         if interface['type'] == 'ipv6':
             link_type = "inet6"
         elif interface['type'] == 'ipv4':
             link_type = "inet"
+
         # We do not know this type of entry
         if not link_type:
             continue
@@ -353,6 +439,7 @@ def write_debian_interfaces(interfaces, sys_interfaces):
                     net=route['network'], mask=route['netmask'],
                     gw=route['gateway'])
         files_to_write[iface_path] = result
+
     for mac, iname in sorted(
             sys_interfaces.items(), key=lambda x: x[1]):
         if _exists_debian_interface(iname):
@@ -402,20 +489,41 @@ def get_config_drive_interfaces(net):
     for link in vlans.values():
         if link['vlan_link'] in phys:
             vlan_link = phys[link['vlan_link']]
+            link['raw_macs'] = [vlan_link['ethernet_mac_address'].lower()]
         elif link['vlan_link'] in bonds:
             vlan_link = bonds[link['vlan_link']]
-        link['link_mac'] = vlan_link['ethernet_mac_address'].lower()
-        link['mac_address'] = link.get(
+            link['raw_macs'] = []
+            for phy in vlan_link['bond_links']:
+                link['raw_macs'].append(
+                    phys[phy]['ethernet_mac_address'].lower())
+        link['mac_address'] = link.pop(
             'vlan_mac_address', vlan_link['ethernet_mac_address']).lower()
 
+    for link in bonds.values():
+        phy_macs = []
+        for phy in link.pop('bond_links'):
+            phy_link = phys[phy]
+            phy_link['bond_master'] = link['id']
+            if phy in phys:
+                phy_macs.append(phy_link['ethernet_mac_address'].lower())
+        link['raw_macs'] = phy_macs
+        link['mac_address'] = link.pop('ethernet_mac_address').lower()
+        if link['id'] not in networks:
+            link['type'] = 'manual'
+            interfaces[link['id']] = link
+
     for link in phys.values():
-        link['mac_address'] = link.get('ethernet_mac_address').lower()
+        link['mac_address'] = link.pop('ethernet_mac_address').lower()
+        if link['id'] not in networks:
+            link['type'] = 'manual'
+            interfaces[link['id']] = link
 
     for i, network in networks.items():
         link = vlans.get(i, phys.get(i, bonds.get(i)))
         if not link:
             continue
         link.update(network)
+        link['id'] = i
         interfaces[i] = link
 
     return interfaces
@@ -676,11 +784,13 @@ def set_hostname_from_config_drive(args):
         network_info = get_network_info(args)
         if network_info:
             interfaces = get_config_drive_interfaces(network_info)
-            key = sorted(interfaces.keys())[0]
-            interface = interfaces[key]
+            keys = sorted(interfaces.keys())
 
-            if interface and 'ip_address' in interface:
-                hostname_ip = interface['ip_address']
+            for key in keys:
+                interface = interfaces[key]
+                if interface and 'ip_address' in interface:
+                    hostname_ip = interface['ip_address']
+                    break
 
         # check short hostname and generate list for hosts
         hosts_to_add[hostname] = hostname_ip

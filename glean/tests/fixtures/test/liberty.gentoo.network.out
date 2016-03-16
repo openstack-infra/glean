@@ -19,7 +19,40 @@ mac_eth3="bc:76:4e:12:a4:bb"
 ### Write /etc/conf.d/net.eth4
 # Automatically generated, do not edit
 vlans_eth4="25 26"
+config_eth4="null"
+mac_eth4="bc:76:4e:12:a4:bc"
 config_eth4_25="dhcp"
 mac_eth4_25="bc:76:4e:12:a4:bc"
 config_eth4_26="dhcp"
 mac_eth4_26="bc:76:4e:12:a4:bd"
+### Write /etc/conf.d/net.eth5
+# Automatically generated, do not edit
+config_eth5="null"
+mac_eth5="bc:76:4e:05:7b:13"
+### Write /etc/conf.d/net.eth6
+# Automatically generated, do not edit
+config_eth6="null"
+mac_eth6="bc:76:4e:05:7b:14"
+### Write /etc/conf.d/net.bond0
+# Automatically generated, do not edit
+config_bond0="dhcp"
+mac_bond0="bc:76:4e:05:7b:13"
+slaves_bond0="eth5 eth6"
+mode_bond0="802.3ad"
+### Write /etc/conf.d/net.eth7
+# Automatically generated, do not edit
+config_eth7="null"
+mac_eth7="bc:76:4e:05:7b:15"
+### Write /etc/conf.d/net.eth8
+# Automatically generated, do not edit
+config_eth8="null"
+mac_eth8="bc:76:4e:05:7b:16"
+### Write /etc/conf.d/net.bond1
+# Automatically generated, do not edit
+vlans_bond1="27"
+config_bond1="null"
+mac_bond1="bc:76:4e:05:7b:15"
+slaves_bond1="eth7 eth8"
+mode_bond1="802.3ad"
+config_bond1_27="dhcp"
+mac_bond1_27="bc:76:4e:12:a4:be"

@@ -30,6 +30,41 @@ auto eth4.26
 iface eth4.26 inet dhcp
     vlan-raw-device eth4
     hw-mac-address bc:76:4e:12:a4:bd
+### Write /etc/network/interfaces.d/eth5.cfg
+auto eth5
+iface eth5 inet manual
+    bond-master bond0
+### Write /etc/network/interfaces.d/eth6.cfg
+auto eth6
+iface eth6 inet manual
+    bond-master bond0
+### Write /etc/network/interfaces.d/bond0.cfg
+auto bond0
+iface bond0 inet dhcp
+    hwaddress bc:76:4e:05:7b:13
+    bond-mode 802.3ad
+    bond-miimon 100
+    bond-slaves eth5 eth6
+### Write /etc/network/interfaces.d/eth7.cfg
+auto eth7
+iface eth7 inet manual
+    bond-master bond1
+### Write /etc/network/interfaces.d/eth8.cfg
+auto eth8
+iface eth8 inet manual
+    bond-master bond1
+### Write /etc/network/interfaces.d/bond1.cfg
+auto bond1
+iface bond1 inet manual
+    hwaddress bc:76:4e:05:7b:15
+    bond-mode 802.3ad
+    bond-miimon 100
+    bond-slaves eth7 eth8
+### Write /etc/network/interfaces.d/bond1.27.cfg
+auto bond1.27
+iface bond1.27 inet dhcp
+    vlan-raw-device bond1
+    hw-mac-address bc:76:4e:12:a4:be
 ### Write /etc/resolv.conf
 nameserver 72.3.128.241
 nameserver 72.3.128.240
