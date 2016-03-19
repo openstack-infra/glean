@@ -63,7 +63,7 @@ def install(source_file, target_file, mode='0755', replacements=dict()):
         log.error("Failed to install %s!" % source_file)
         sys.exit(ret)
 
-    for k, v in replacements.iteritems():
+    for k, v in replacements.items():
         log.info("Replacing %s -> %s in %s" % (k, v, target_file))
 
         cmd = 'sed -i "s|%%{k}%%|{v}|g" {target_file}'.format(
