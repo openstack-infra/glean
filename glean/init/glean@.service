@@ -1,5 +1,5 @@
 [Unit]
-Description=DHCP interface %I
+Description=Glean for interface %I
 After=network.service network.target
 
 ConditionPathExists=!/etc/sysconfig/network-scripts/ifcfg-%I
