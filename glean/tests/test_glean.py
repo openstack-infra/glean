@@ -73,6 +73,7 @@ class TestGlean(base.BaseTestCase):
                 mock_handle = mock.Mock()
                 mock_handle.__enter__ = mock.Mock()
                 mock_handle.__exit__ = mock.Mock()
+                mock_handle.name = args[0]
                 # This is a trick to handle open used as a context
                 # manager (i.e. with open('foo') as f).  It's the
                 # returned object that gets called, so we point it
@@ -86,12 +87,10 @@ class TestGlean(base.BaseTestCase):
                 # second call opens as usual.  We check that there
                 # was an os.unlink() performed
                 if args[0].startswith('/etc/resolv.conf'):
-                    self._resolv_unlinked = True
-                    mock_handle.__enter__ = mock.Mock(
-                        side_effect=[IOError(errno.ELOOP,
-                                             os.strerror(errno.ELOOP),
-                                             args[0]),
-                                     mock_handle])
+                    if not self._resolv_unlinked:
+                        self._resolv_unlinked = True
+                        raise IOError(errno.ELOOP,
+                                      os.strerror(errno.ELOOP), args[0])
                 self.file_handle_mocks[args[0]] = mock_handle
             return mock_handle
         elif args[0].startswith('/sys/class/net'):

@@ -16,6 +16,7 @@
 # limitations under the License.
 
 import argparse
+import contextlib
 import errno
 import json
 import logging
@@ -38,6 +39,24 @@ slaves_del = "    pre-down ifenslave -d {0} {1}\n"
 
 # Type value for permanent mac addrs as defined by the linux kernel.
 PERMANENT_ADDR_TYPE = '0'
+
+# Global flag for selinux restore.
+SELINUX_RESTORECON = '/usr/sbin/restorecon'
+HAVE_SELINUX = os.path.exists(SELINUX_RESTORECON)
+
+
+# Wrap open calls in this to make sure that any created or modified
+# files retain their selinux context.
+@contextlib.contextmanager
+def safe_open(*args, **kwargs):
+    f = open(*args, **kwargs)
+    try:
+        yield f
+    finally:
+        path = os.path.abspath(f.name)
+        if HAVE_SELINUX:
+            logging.debug("Restoring selinux context for %s" % path)
+            subprocess.call([SELINUX_RESTORECON, path])
 
 
 def _exists_rh_interface(name):
@@ -628,7 +647,7 @@ def finish_files(files_to_write, args):
         while True:
             try:
                 log.debug("Writing output file : %s" % k)
-                with open(k, 'w') as outfile:
+                with safe_open(k, 'w') as outfile:
                     outfile.write(files_to_write[k])
                 log.debug(" ... done")
                 break
@@ -880,7 +899,7 @@ def set_hostname_from_config_drive(args):
             with open('/etc/conf.d/hostname', 'w') as fh:
                 fh.write("hostname=\"{host}\"\n".format(host=hostname))
         else:
-            with open('/etc/hostname', 'w') as fh:
+            with safe_open('/etc/hostname', 'w') as fh:
                 fh.write(hostname)
                 fh.write('\n')
 
@@ -917,7 +936,7 @@ def set_hostname_from_config_drive(args):
 
             # Write out a hosts entry for hostname
             if match is None:
-                with open('/etc/hosts', 'a+') as fh:
+                with safe_open('/etc/hosts', 'a+') as fh:
                     fh.write(u'%s %s\n' % (host_value, host))
 
 
