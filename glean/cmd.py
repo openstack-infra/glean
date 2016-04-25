@@ -594,6 +594,9 @@ def finish_files(files_to_write, args):
                     os.unlink(k)
                     retries = 1
                     continue
+                elif e.errno == errno.EACCESS:
+                    log.debug(" ... is read only, skipped")
+                    break
                 else:
                     raise
 
