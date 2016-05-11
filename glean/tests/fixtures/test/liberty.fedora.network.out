@@ -47,6 +47,71 @@ ONBOOT=yes
 NM_CONTROLLED=no
 TYPE=Ethernet
 VLAN=yes
+### Write /etc/sysconfig/network-scripts/ifcfg-eth5
+# Automatically generated, do not edit
+DEVICE=eth5
+BOOTPROTO=none
+HWADDR=bc:76:4e:05:7b:13
+ONBOOT=yes
+NM_CONTROLLED=no
+TYPE=Ethernet
+SLAVE=yes
+MASTER=bond0
+### Write /etc/sysconfig/network-scripts/ifcfg-eth6
+# Automatically generated, do not edit
+DEVICE=eth6
+BOOTPROTO=none
+HWADDR=bc:76:4e:05:7b:14
+ONBOOT=yes
+NM_CONTROLLED=no
+TYPE=Ethernet
+SLAVE=yes
+MASTER=bond0
+### Write /etc/sysconfig/network-scripts/ifcfg-bond0
+# Automatically generated, do not edit
+DEVICE=bond0
+BOOTPROTO=dhcp
+HWADDR=bc:76:4e:05:7b:13
+ONBOOT=yes
+NM_CONTROLLED=no
+TYPE=Ethernet
+### Write /etc/sysconfig/network-scripts/ifcfg-eth7
+# Automatically generated, do not edit
+DEVICE=eth7
+BOOTPROTO=none
+HWADDR=bc:76:4e:05:7b:15
+ONBOOT=yes
+NM_CONTROLLED=no
+TYPE=Ethernet
+SLAVE=yes
+MASTER=bond1
+### Write /etc/sysconfig/network-scripts/ifcfg-eth8
+# Automatically generated, do not edit
+DEVICE=eth8
+BOOTPROTO=none
+HWADDR=bc:76:4e:05:7b:16
+ONBOOT=yes
+NM_CONTROLLED=no
+TYPE=Ethernet
+SLAVE=yes
+MASTER=bond1
+### Write /etc/sysconfig/network-scripts/ifcfg-bond1
+# Automatically generated, do not edit
+DEVICE=bond1
+BOOTPROTO=none
+HWADDR=bc:76:4e:05:7b:15
+ONBOOT=yes
+NM_CONTROLLED=no
+TYPE=Ethernet
+### Write /etc/sysconfig/network-scripts/ifcfg-bond1.27
+# Automatically generated, do not edit
+DEVICE=bond1.27
+BOOTPROTO=dhcp
+HWADDR=bc:76:4e:12:a4:be
+ONBOOT=yes
+NM_CONTROLLED=no
+TYPE=Ethernet
+VLAN=yes
 ### Write /etc/sysconfig/network-scripts/route-eth1
 ADDRESS0=10.176.0.0
 NETMASK0=255.240.0.0

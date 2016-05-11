@@ -77,6 +77,18 @@
       "type": "ipv4_dhcp",
       "link": "vlan1",
       "id": "network5"
+    },
+    {
+      "network_id": "66666666-6666-6666-6666-666666666666",
+      "type": "ipv4_dhcp",
+      "link": "bond0",
+      "id": "network6"
+    },
+    {
+      "network_id": "77777777-7777-7777-7777-777777777777",
+      "type": "ipv4_dhcp",
+      "link": "vlan2",
+      "id": "network7"
     }
   ],
   "links": [
@@ -100,6 +112,30 @@
       "type": "phy",
       "id": "tap234ab34c-f1",
       "vif_id": "acdb875a-87da-76cb-984c-acd9a75dbca7"
+    },
+    {
+      "ethernet_mac_address": "BC:76:4E:05:7B:13",
+      "mtu": 1500,
+      "type": "phy",
+      "id": "tap234ab34c-f5"
+    },
+    {
+      "ethernet_mac_address": "BC:76:4E:05:7B:14",
+      "mtu": 1500,
+      "type": "phy",
+      "id": "tap234ab34c-f6"
+    },
+    {
+      "ethernet_mac_address": "BC:76:4E:05:7B:15",
+      "mtu": 1500,
+      "type": "phy",
+      "id": "tap234ab34c-f7"
+    },
+    {
+      "ethernet_mac_address": "BC:76:4E:05:7B:16",
+      "mtu": 1500,
+      "type": "phy",
+      "id": "tap234ab34c-f8"
     },
     {
       "ethernet_mac_address": "BC:76:4E:12:a4:bb",
@@ -127,6 +163,37 @@
       "vlan_link": "ethwithvlan",
       "vlan_id": 26,
       "vlan_mac_address": "BC:76:4E:12:a4:bd"
+    },
+    {
+      "id": "bond0",
+      "type": "bond",
+      "ethernet_mac_address": "BC:76:4E:05:7B:13",
+      "bond_mode": "802.3ad",
+      "bond_miimon": 100,
+      "bond_xmit_hash_policy": "layer3+4",
+      "bond_links": [
+        "tap234ab34c-f5",
+        "tap234ab34c-f6"
+      ]
+    },
+    {
+      "id": "bond1",
+      "type": "bond",
+      "ethernet_mac_address": "BC:76:4E:05:7B:15",
+      "bond_mode": "802.3ad",
+      "bond_miimon": 100,
+      "bond_xmit_hash_policy": "layer3+4",
+      "bond_links": [
+        "tap234ab34c-f7",
+        "tap234ab34c-f8"
+      ]
+    },
+    {
+      "id": "vlan2",
+      "type": "vlan",
+      "vlan_link": "bond1",
+      "vlan_id": 27,
+      "vlan_mac_address": "BC:76:4E:12:a4:be"
     }
   ]
 }
