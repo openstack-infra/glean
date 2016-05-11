@@ -24,6 +24,12 @@ iface eth3 inet dhcp
 auto eth4.25
 iface eth4.25 inet dhcp
     vlan-raw-device eth4
+    hw-mac-address bc:76:4e:12:a4:bc
+### Write /etc/network/interfaces.d/eth4.26.cfg
+auto eth4.26
+iface eth4.26 inet dhcp
+    vlan-raw-device eth4
+    hw-mac-address bc:76:4e:12:a4:bd
 ### Write /etc/resolv.conf
 nameserver 72.3.128.241
 nameserver 72.3.128.240

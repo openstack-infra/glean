@@ -5,7 +5,7 @@ nameserver 72.3.128.240
 # Automatically generated, do not edit
 DEVICE=eth0
 BOOTPROTO=static
-HWADDR=BC:76:4E:01:62:86
+HWADDR=bc:76:4e:01:62:86
 IPADDR=23.253.229.154
 NETMASK=255.255.255.0
 ONBOOT=yes
@@ -16,7 +16,7 @@ GATEWAY=23.253.229.1
 # Automatically generated, do not edit
 DEVICE=eth1
 BOOTPROTO=static
-HWADDR=BC:76:4E:05:7B:06
+HWADDR=bc:76:4e:05:7b:06
 IPADDR=10.208.169.118
 NETMASK=255.255.224.0
 ONBOOT=yes
@@ -25,7 +25,7 @@ NM_CONTROLLED=no
 # Automatically generated, do not edit
 DEVICE=eth3
 BOOTPROTO=dhcp
-HWADDR=BC:76:4E:12:a4:bb
+HWADDR=bc:76:4e:12:a4:bb
 ONBOOT=yes
 NM_CONTROLLED=no
 TYPE=Ethernet
@@ -33,7 +33,16 @@ TYPE=Ethernet
 # Automatically generated, do not edit
 DEVICE=eth4.25
 BOOTPROTO=dhcp
-HWADDR=BC:76:4E:12:a4:bc
+HWADDR=bc:76:4e:12:a4:bc
+ONBOOT=yes
+NM_CONTROLLED=no
+TYPE=Ethernet
+VLAN=yes
+### Write /etc/sysconfig/network-scripts/ifcfg-eth4.26
+# Automatically generated, do not edit
+DEVICE=eth4.26
+BOOTPROTO=dhcp
+HWADDR=bc:76:4e:12:a4:bd
 ONBOOT=yes
 NM_CONTROLLED=no
 TYPE=Ethernet
