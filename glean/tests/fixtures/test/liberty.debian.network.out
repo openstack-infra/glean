@@ -65,6 +65,16 @@ auto bond1.27
 iface bond1.27 inet dhcp
     vlan-raw-device bond1
     hw-mac-address bc:76:4e:12:a4:be
+### Write /etc/network/interfaces.d/bond2.cfg
+auto bond2
+iface bond2 inet static
+    hwaddress bc:76:4e:05:7b:17
+    bond-mode 802.3ad
+    bond-miimon 100
+    bond-slaves eth9 eth10
+    address 192.0.2.2
+    netmask 255.255.255.0
+    gateway 192.0.2.1
 ### Write /etc/resolv.conf
 nameserver 72.3.128.241
 nameserver 72.3.128.240

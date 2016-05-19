@@ -427,6 +427,20 @@ def write_debian_interfaces(interfaces, sys_interfaces):
             name=interface_name, link_type=link_type)
         if vlan_raw_device:
             result += "    vlan-raw-device {0}\n".format(vlan_raw_device)
+        if 'bond_master' in interface:
+            result += "    bond-master {0}\n".format(
+                interface['bond_master'])
+        if 'bond_mode' in interface:
+            if interface['mac_address']:
+                result += "    hwaddress {0}\n".format(
+                    interface['mac_address'])
+            result += "    bond-mode {0}\n".format(interface['bond_mode'])
+            result += "    bond-miimon {0}\n".format(
+                interface['bond_miimon'])
+            slave_devices = [sys_interfaces[mac]
+                             for mac in interface['raw_macs']]
+            slaves = ' '.join(slave_devices)
+            result += "    bond-slaves {0}\n".format(slaves)
         result += "    address {0}\n".format(interface['ip_address'])
         result += "    netmask {0}\n".format(interface['netmask'])
         for route in interface['routes']:

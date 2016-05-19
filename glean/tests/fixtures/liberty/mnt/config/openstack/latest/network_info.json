@@ -89,6 +89,21 @@
       "type": "ipv4_dhcp",
       "link": "vlan2",
       "id": "network7"
+    },
+    {
+      "network_id": "88888888-8888-8888-8888-888888888888",
+      "type": "ipv4",
+      "link": "bond2",
+      "netmask": "255.255.255.0",
+      "routes": [
+        {
+          "netmask": "0.0.0.0",
+          "network": "0.0.0.0",
+          "gateway": "192.0.2.1"
+        }
+      ],
+      "ip_address": "192.0.2.2",
+      "id": "network8"
     }
   ],
   "links": [
@@ -136,6 +151,18 @@
       "mtu": 1500,
       "type": "phy",
       "id": "tap234ab34c-f8"
+    },
+    {
+      "ethernet_mac_address": "BC:76:4E:05:7B:17",
+      "mtu": 1500,
+      "type": "phy",
+      "id": "tap234ab34c-f9"
+    },
+    {
+      "ethernet_mac_address": "BC:76:4E:05:7B:18",
+      "mtu": 1500,
+      "type": "phy",
+      "id": "tap234ab34c-fa"
     },
     {
       "ethernet_mac_address": "BC:76:4E:12:a4:bb",
@@ -186,6 +213,18 @@
       "bond_links": [
         "tap234ab34c-f7",
         "tap234ab34c-f8"
+      ]
+    },
+    {
+      "id": "bond2",
+      "type": "bond",
+      "ethernet_mac_address": "BC:76:4E:05:7B:17",
+      "bond_mode": "802.3ad",
+      "bond_miimon": 100,
+      "bond_xmit_hash_policy": "layer3+4",
+      "bond_links": [
+        "tap234ab34c-f9",
+        "tap234ab34c-fa"
       ]
     },
     {
