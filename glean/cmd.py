@@ -872,7 +872,6 @@ def set_hostname_from_config_drive(args):
         log.debug("Fixed up hostname to %s" % hostname)
 
     ret = subprocess.call(['hostname', hostname])
-
     if ret != 0:
         raise RuntimeError('Error setting hostname')
     else:

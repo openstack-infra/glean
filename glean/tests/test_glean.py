@@ -14,8 +14,10 @@
 # limitations under the License.
 
 import errno
+import functools
 import json
 import os
+import sys
 
 import fixtures
 import mock
@@ -42,6 +44,10 @@ for distro in distros:
             ('%s-%s' % (distro, style),
              dict(distro=distro, style=style)))
 
+# save these for wrapping
+real_path_exists = os.path.exists
+real_listdir = os.listdir
+
 
 class TestGlean(base.BaseTestCase):
 
@@ -50,9 +56,6 @@ class TestGlean(base.BaseTestCase):
     def setUp(self):
         super(TestGlean, self).setUp()
         self._resolv_unlinked = False
-
-    def _patch_argv(self, args):
-        self.useFixture(fixtures.MonkeyPatch('sys.argv', ['.'] + args))
 
     def _patch_files(self, sample_prefix):
         std_open = open
@@ -108,66 +111,74 @@ class TestGlean(base.BaseTestCase):
         self.useFixture(fixtures.MonkeyPatch('six.moves.builtins.open',
                                              mock_open))
 
-        real_listdir = os.listdir
+    def os_listdir_side_effect(self, sample_prefix, path):
+        if path.startswith('/'):
+            path = path[1:]
+        return real_listdir(os.path.join(
+            sample_data_path, sample_prefix, path))
 
-        def fake_listdir(path):
-            if path.startswith('/'):
-                path = path[1:]
-            return real_listdir(os.path.join(
-                sample_data_path, sample_prefix, path))
+    def os_path_exists_side_effect(self, sample_prefix, path):
+        if path.startswith('/mnt/config'):
+            path = os.path.join(
+                sample_data_path, sample_prefix,
+                path[1:])
+        if path in ['/etc/sysconfig/network-scripts/ifcfg-eth2',
+                    '/etc/network/interfaces.d/eth2.cfg',
+                    '/etc/conf.d/net.eth2']:
+            # Pretend this file exists, we need to test skipping
+            # pre-existing config files
+            return True
+        elif (path.startswith('/etc/sysconfig/network-scripts/') or
+              path.startswith('/etc/network/interfaces.d/') or
+              path.startswith('/etc/conf.d/')):
+            # Don't check the host os's network config
+            return False
+        return real_path_exists(path)
 
-        self.useFixture(fixtures.MonkeyPatch('os.listdir', fake_listdir))
-        self.useFixture(fixtures.MonkeyPatch('os.symlink',
-                                             mock.Mock(return_value=0)))
-        self.useFixture(fixtures.MonkeyPatch(
-            'subprocess.check_output', mock.Mock()))
-        self.useFixture(fixtures.MonkeyPatch('os.system',
-                                             mock.Mock(return_value=0)))
+    @mock.patch('platform.dist', new_callable=mock.Mock)
+    @mock.patch('subprocess.call', return_value=0, new_callable=mock.Mock)
+    @mock.patch('subprocess.check_output', return_value=0,
+                new_callable=mock.Mock)
+    @mock.patch('os.unlink', return_value=0, new_callable=mock.Mock)
+    @mock.patch('os.symlink', return_value=0, new_callable=mock.Mock)
+    @mock.patch('os.path.exists', new_callable=mock.Mock)
+    @mock.patch('os.listdir', new_callable=mock.Mock)
+    @mock.patch('os.system', return_value=0, new_callable=mock.Mock)
+    @mock.patch.object(sys, 'argv', ['./glean', '--hostname'])
+    def _assert_distro_provider(self, distro, provider, interface,
+                                mock_os_system,
+                                mock_os_listdir,
+                                mock_os_path_exists,
+                                mock_os_symlink,
+                                mock_os_unlink,
+                                mock_check_output,
+                                mock_call,
+                                mock_platform_dist):
+        """Main test function
 
-        real_path_exists = os.path.exists
+        :param distro: distro to return from "platform.dist"
+        :param provider: we will look in fixtures/provider for mocked
+                         out files
+        :param interface: --interface argument; None for no argument
+        """
 
-        def fake_path_exists(path):
-            if path.startswith('/mnt/config'):
-                path = os.path.join(
-                    sample_data_path, sample_prefix,
-                    path[1:])
-            if path in ['/etc/sysconfig/network-scripts/ifcfg-eth2',
-                        '/etc/network/interfaces.d/eth2.cfg',
-                        '/etc/conf.d/net.eth2']:
-                # Pretend this file exists, we need to test skipping
-                # pre-existing config files
-                return True
-            elif (path.startswith('/etc/sysconfig/network-scripts/') or
-                  path.startswith('/etc/network/interfaces.d/') or
-                  path.startswith('/etc/conf.d/')):
-                # Don't check the host os's network config
-                return False
-            return real_path_exists(path)
-
-        self.useFixture(fixtures.MonkeyPatch('os.path.exists',
-                                             fake_path_exists))
-
-    def _patch_distro(self, distro_name):
-        def fake_distro():
-            return (distro_name, '', '')
-
-        self.useFixture(fixtures.MonkeyPatch('platform.dist', fake_distro))
-
-    def _assert_distro_provider(self, distro, provider, interface=None):
-        argv = ['--hostname']
-        if interface:
-            argv.append('--interface=%s' % interface)
-        self._patch_argv(argv)
         self._patch_files(provider)
-        self._patch_distro(distro)
 
-        mock_call = mock.Mock()
-        call = mock.call
-        mock_call.return_value = 0
-        self.useFixture(fixtures.MonkeyPatch('subprocess.call', mock_call))
+        mock_platform_dist.return_value = (distro, '', '')
 
-        mock_unlink = mock.Mock(return_value=0)
-        self.useFixture(fixtures.MonkeyPatch('os.unlink', mock_unlink))
+        # These functions are watching the path and faking results
+        # based on various things
+        # XXX : There are several virtual file-systems available, we
+        # might like to look into them and just point ourselves at
+        # testing file-systems in the future if this becomes more
+        # complex.
+        mock_os_path_exists.side_effect = functools.partial(
+            self.os_path_exists_side_effect, provider)
+        mock_os_listdir.side_effect = functools.partial(
+            self.os_listdir_side_effect, provider)
+
+        if interface:
+            sys.argv.append('--interface=%s' % interface)
 
         cmd.main()
 
@@ -199,7 +210,7 @@ class TestGlean(base.BaseTestCase):
             write_handle.assert_called_once_with(content)
 
         if self._resolv_unlinked:
-            mock_unlink.assert_called_once_with('/etc/resolv.conf')
+            mock_os_unlink.assert_called_once_with('/etc/resolv.conf')
 
         # Check hostname
         meta_data_path = 'mnt/config/openstack/latest/meta_data.json'
@@ -209,7 +220,7 @@ class TestGlean(base.BaseTestCase):
             meta_data = json.load(fh)
             hostname = meta_data['name']
 
-        mock_call.assert_has_calls([call(['hostname', hostname])])
+        mock_call.assert_has_calls([mock.call(['hostname', hostname])])
         if distro.lower() is 'gentoo':
             (self.file_handle_mocks['/etc/conf.d/hostname'].write.
                 assert_has_calls([mock.call(hostname)]))
@@ -229,7 +240,7 @@ class TestGlean(base.BaseTestCase):
 
     def test_glean(self):
         with mock.patch('glean.systemlock.Lock'):
-            self._assert_distro_provider(self.distro, self.style)
+            self._assert_distro_provider(self.distro, self.style, None)
 
     # In the systemd case, we are a templated unit file
     # (glean@.service) so we get called once for each interface that
