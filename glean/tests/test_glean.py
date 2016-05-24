@@ -58,14 +58,32 @@ class TestGlean(base.BaseTestCase):
         self.file_handle_mocks = {}
 
     def open_side_effect(self, sample_prefix, *args, **kwargs):
-        if (args[0].startswith('/etc/network') or
-                args[0].startswith('/etc/sysconfig/network-scripts') or
-                args[0].startswith('/etc/resolv.conf') or
-                args[0].startswith('/etc/conf.d') or
-                args[0].startswith('/etc/init.d') or
-                args[0] in ('/etc/hostname', '/etc/hosts')):
+        # incoming file
+        path = args[0]
+
+        # we redirect some files to files in here
+        sample_path = os.path.join(sample_data_path, sample_prefix)
+
+        # Test broken symlink handling -- we want the code to unlink
+        # this file and write a new one.  Simulate a /etc/resolv.conf
+        # that at first returns ELOOP (i.e. broken symlink) when
+        # opened, but on the second call opens as usual.  We check
+        # that there was an os.unlink() performed
+        if path.startswith('/etc/resolv.conf'):
+            if not self._resolv_unlinked:
+                self._resolv_unlinked = True
+                raise IOError(errno.ELOOP,
+                              os.strerror(errno.ELOOP), path)
+
+        # mock any files in these paths as blank files.  Keep track of
+        # them in file_handle_mocks{} so we can assert they were
+        # called later
+        mock_dirs = ('/etc/network', '/etc/sysconfig/network-scripts',
+                     '/etc/conf.d', '/etc/init.d')
+        mock_files = ('/etc/resolv.conf', '/etc/hostname', '/etc/hosts')
+        if (path.startswith(mock_dirs) or path in mock_files):
             try:
-                mock_handle = self.file_handle_mocks[args[0]]
+                mock_handle = self.file_handle_mocks[path]
             except KeyError:
                 # note; don't use spec=file here ... it's not py3
                 # compatible.  It really just limits the allowed
@@ -73,39 +91,24 @@ class TestGlean(base.BaseTestCase):
                 mock_handle = mock.Mock()
                 mock_handle.__enter__ = mock.Mock()
                 mock_handle.__exit__ = mock.Mock()
-                mock_handle.name = args[0]
+                mock_handle.name = path
                 # This is a trick to handle open used as a context
                 # manager (i.e. with open('foo') as f).  It's the
                 # returned object that gets called, so we point it
                 # back at the underlying mock (see mock.mock_open())
                 mock_handle.__enter__.return_value = mock_handle
                 mock_handle.read.return_value = ''
-                # Test broken symlink handling -- we want to
-                # unlink the file and write a new one.  Simulate a
-                # /etc/resolv.conf that at first returns ELOOP
-                # (i.e. broken symlink) when opened, but on the
-                # second call opens as usual.  We check that there
-                # was an os.unlink() performed
-                if args[0].startswith('/etc/resolv.conf'):
-                    if not self._resolv_unlinked:
-                        self._resolv_unlinked = True
-                        raise IOError(errno.ELOOP,
-                                      os.strerror(errno.ELOOP), args[0])
-                self.file_handle_mocks[args[0]] = mock_handle
+                self.file_handle_mocks[path] = mock_handle
             return mock_handle
-        elif args[0].startswith('/sys/class/net'):
-            mock_args = [os.path.join(
-                sample_data_path, sample_prefix, args[0][1:])]
-            if len(args) > 1:
-                mock_args += args[1:]
-            return open(*mock_args, **kwargs)
-        elif args[0].startswith('/mnt/config'):
-            mock_args = [os.path.join(
-                sample_data_path, sample_prefix,
-                args[0][1:])]
-            if len(args) > 1:
-                mock_args += args[1:]
-            return open(*mock_args, **kwargs)
+
+        # redirect these files to our samples
+        elif path.startswith(('/sys/class/net',
+                              '/mnt/config')):
+            new_args = list(args)
+            new_args[0] = os.path.join(sample_path, path[1:])
+            return open(*new_args, **kwargs)
+
+        # otherwise just pass it through
         else:
             return open(*args, **kwargs)
 
@@ -117,18 +120,16 @@ class TestGlean(base.BaseTestCase):
 
     def os_path_exists_side_effect(self, sample_prefix, path):
         if path.startswith('/mnt/config'):
-            path = os.path.join(
-                sample_data_path, sample_prefix,
-                path[1:])
-        if path in ['/etc/sysconfig/network-scripts/ifcfg-eth2',
+            path = os.path.join(sample_data_path, sample_prefix, path[1:])
+        if path in ('/etc/sysconfig/network-scripts/ifcfg-eth2',
                     '/etc/network/interfaces.d/eth2.cfg',
-                    '/etc/conf.d/net.eth2']:
+                    '/etc/conf.d/net.eth2'):
             # Pretend this file exists, we need to test skipping
             # pre-existing config files
             return True
-        elif (path.startswith('/etc/sysconfig/network-scripts/') or
-              path.startswith('/etc/network/interfaces.d/') or
-              path.startswith('/etc/conf.d/')):
+        elif (path.startswith(('/etc/sysconfig/network-scripts/',
+                               '/etc/network/interfaces.d/',
+                               '/etc/conf.d/'))):
             # Don't check the host os's network config
             return False
         return real_path_exists(path)
