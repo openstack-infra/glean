@@ -19,7 +19,6 @@ import json
 import os
 import sys
 
-import fixtures
 import mock
 from oslotest import base
 from testscenarios import load_tests_apply_scenarios as load_tests  # noqa
@@ -56,60 +55,60 @@ class TestGlean(base.BaseTestCase):
     def setUp(self):
         super(TestGlean, self).setUp()
         self._resolv_unlinked = False
-
-    def _patch_files(self, sample_prefix):
-        std_open = open
         self.file_handle_mocks = {}
 
-        def open_side_effect(*args, **kwargs):
-            if (args[0].startswith('/etc/network') or
-                    args[0].startswith('/etc/sysconfig/network-scripts') or
-                    args[0].startswith('/etc/resolv.conf') or
-                    args[0].startswith('/etc/conf.d') or
-                    args[0].startswith('/etc/init.d') or
-                    args[0] in ('/etc/hostname', '/etc/hosts')):
-                try:
-                    mock_handle = self.file_handle_mocks[args[0]]
-                except KeyError:
-                    mock_handle = mock.Mock()
-                    mock_handle.__enter__ = mock.Mock(return_value=mock_handle)
-                    mock_handle.__exit__ = mock.Mock()
-                    mock_handle.read.return_value = ''
-                    # Test broken symlink handling -- we want to
-                    # unlink the file and write a new one.  Simulate a
-                    # /etc/resolv.conf that at first returns ELOOP
-                    # (i.e. broken symlink) when opened, but on the
-                    # second call opens as usual.  We check that there
-                    # was an os.unlink() performed
-                    if args[0].startswith('/etc/resolv.conf'):
-                        self._resolv_unlinked = True
-                        mock_handle.__enter__ = mock.Mock(
-                            side_effect=[IOError(errno.ELOOP,
-                                                 os.strerror(errno.ELOOP),
-                                                 args[0]),
-                                         mock_handle])
-                    self.file_handle_mocks[args[0]] = mock_handle
-
-                return mock_handle
-            elif args[0].startswith('/sys/class/net'):
-                mock_args = [os.path.join(
-                    sample_data_path, sample_prefix, args[0][1:])]
-                if len(args) > 1:
-                    mock_args += args[1:]
-                return std_open(*mock_args, **kwargs)
-            elif args[0].startswith('/mnt/config'):
-                mock_args = [os.path.join(
-                    sample_data_path, sample_prefix,
-                    args[0][1:])]
-                if len(args) > 1:
-                    mock_args += args[1:]
-                return std_open(*mock_args, **kwargs)
-            else:
-                return std_open(*args, **kwargs)
-
-        mock_open = mock.Mock(side_effect=open_side_effect)
-        self.useFixture(fixtures.MonkeyPatch('six.moves.builtins.open',
-                                             mock_open))
+    def open_side_effect(self, sample_prefix, *args, **kwargs):
+        if (args[0].startswith('/etc/network') or
+                args[0].startswith('/etc/sysconfig/network-scripts') or
+                args[0].startswith('/etc/resolv.conf') or
+                args[0].startswith('/etc/conf.d') or
+                args[0].startswith('/etc/init.d') or
+                args[0] in ('/etc/hostname', '/etc/hosts')):
+            try:
+                mock_handle = self.file_handle_mocks[args[0]]
+            except KeyError:
+                # note; don't use spec=file here ... it's not py3
+                # compatible.  It really just limits the allowed
+                # mocked functions.
+                mock_handle = mock.Mock()
+                mock_handle.__enter__ = mock.Mock()
+                mock_handle.__exit__ = mock.Mock()
+                # This is a trick to handle open used as a context
+                # manager (i.e. with open('foo') as f).  It's the
+                # returned object that gets called, so we point it
+                # back at the underlying mock (see mock.mock_open())
+                mock_handle.__enter__.return_value = mock_handle
+                mock_handle.read.return_value = ''
+                # Test broken symlink handling -- we want to
+                # unlink the file and write a new one.  Simulate a
+                # /etc/resolv.conf that at first returns ELOOP
+                # (i.e. broken symlink) when opened, but on the
+                # second call opens as usual.  We check that there
+                # was an os.unlink() performed
+                if args[0].startswith('/etc/resolv.conf'):
+                    self._resolv_unlinked = True
+                    mock_handle.__enter__ = mock.Mock(
+                        side_effect=[IOError(errno.ELOOP,
+                                             os.strerror(errno.ELOOP),
+                                             args[0]),
+                                     mock_handle])
+                self.file_handle_mocks[args[0]] = mock_handle
+            return mock_handle
+        elif args[0].startswith('/sys/class/net'):
+            mock_args = [os.path.join(
+                sample_data_path, sample_prefix, args[0][1:])]
+            if len(args) > 1:
+                mock_args += args[1:]
+            return open(*mock_args, **kwargs)
+        elif args[0].startswith('/mnt/config'):
+            mock_args = [os.path.join(
+                sample_data_path, sample_prefix,
+                args[0][1:])]
+            if len(args) > 1:
+                mock_args += args[1:]
+            return open(*mock_args, **kwargs)
+        else:
+            return open(*args, **kwargs)
 
     def os_listdir_side_effect(self, sample_prefix, path):
         if path.startswith('/'):
@@ -144,8 +143,10 @@ class TestGlean(base.BaseTestCase):
     @mock.patch('os.path.exists', new_callable=mock.Mock)
     @mock.patch('os.listdir', new_callable=mock.Mock)
     @mock.patch('os.system', return_value=0, new_callable=mock.Mock)
+    @mock.patch('glean.cmd.open', new_callable=mock.Mock)
     @mock.patch.object(sys, 'argv', ['./glean', '--hostname'])
     def _assert_distro_provider(self, distro, provider, interface,
+                                mock_open,
                                 mock_os_system,
                                 mock_os_listdir,
                                 mock_os_path_exists,
@@ -162,8 +163,6 @@ class TestGlean(base.BaseTestCase):
         :param interface: --interface argument; None for no argument
         """
 
-        self._patch_files(provider)
-
         mock_platform_dist.return_value = (distro, '', '')
 
         # These functions are watching the path and faking results
@@ -176,6 +175,8 @@ class TestGlean(base.BaseTestCase):
             self.os_path_exists_side_effect, provider)
         mock_os_listdir.side_effect = functools.partial(
             self.os_listdir_side_effect, provider)
+        mock_open.side_effect = functools.partial(
+            self.open_side_effect, provider)
 
         if interface:
             sys.argv.append('--interface=%s' % interface)
