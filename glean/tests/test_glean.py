@@ -16,8 +16,6 @@
 import errno
 import json
 import os
-import posix
-import stat
 
 import fixtures
 import mock
@@ -148,14 +146,6 @@ class TestGlean(base.BaseTestCase):
 
         self.useFixture(fixtures.MonkeyPatch('os.path.exists',
                                              fake_path_exists))
-
-        def fake_stat(path):
-            faked = list(orig_os_stat(path))
-            faked[stat.ST_MODE] = 33279
-            return posix.stat_result(faked)
-
-        orig_os_stat = os.stat
-        self.useFixture(fixtures.MonkeyPatch('os.stat', fake_stat))
 
     def _patch_distro(self, distro_name):
         def fake_distro():
