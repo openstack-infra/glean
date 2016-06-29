@@ -47,7 +47,7 @@ if blkid -t LABEL="config-2" ; then
     # Mount config drive
     mkdir -p /mnt/config
     BLOCKDEV="$(blkid -L config-2)"
-    TYPE="$(blkid ${BLOCKDEV} -o udev | grep FS_TYPE | cut -d '=' -f 2)"
+    TYPE="$(blkid -t LABEL=config-2 -s TYPE -o value)"
     if [[ "${TYPE}" == 'vfat' ]]; then
         mount -o umask=0077 "${BLOCKDEV}" /mnt/config || true
     else
