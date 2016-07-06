@@ -34,6 +34,10 @@ post_up = "    post-up route add -net {net} netmask {mask} gw {gw} || true\n"
 pre_down = "    pre-down route del -net {net} netmask {mask} gw {gw} || true\n"
 
 
+# Type value for permanent mac addrs as defined by the linux kernel.
+PERMANENT_ADDR_TYPE = '0'
+
+
 def _exists_rh_interface(name):
     file_to_check = '/etc/sysconfig/network-scripts/ifcfg-{name}'.format(
         name=name
@@ -672,7 +676,8 @@ def get_sys_interfaces(interface, args):
 
         mac_addr_type = open(
             '%s/%s/addr_assign_type' % (sys_root, iface), 'r').read().strip()
-        if mac_addr_type != '0':
+        # TODO why? is it not valid to configure randomly assigned mac addrs?
+        if mac_addr_type != PERMANENT_ADDR_TYPE:
             continue
         mac = open('%s/%s/address' % (sys_root, iface), 'r').read().strip()
         if interface_live(iface, sys_root, args):
