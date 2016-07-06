@@ -701,6 +701,9 @@ def get_network_info(args):
     if os.path.exists(network_info_file):
         log.debug("Found network_info file %s" % network_info_file)
         network_info = json.load(open(network_info_file))
+    # network_data.json is the file written by nova that should be there.
+    # Other cloud deployments may use the above network_info.json or
+    # vendor_data.json but the canonical location is this one.
     if os.path.exists(network_data_file):
         log.debug("Found network_info file %s" % network_data_file)
         network_info = json.load(open(network_data_file))
