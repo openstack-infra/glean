@@ -385,7 +385,11 @@ def write_debian_interfaces(interfaces, sys_interfaces):
                         interface['mac_address'])
                 result += "    bond-mode {0}\n".format(interface['bond_mode'])
                 result += "    bond-miimon {0}\n".format(
-                    interface['bond_miimon'])
+                    interface.get('bond_miimon', 0))
+                result += "    bond-lacp-rate {0}\n".format(
+                    interface.get('bond_lacp_rate', 'slow'))
+                result += "    bond-xmit_hash_policy {0}\n".format(
+                    interface.get('bond_xmit_hash_policy', 'layer2'))
                 slave_devices = [sys_interfaces[mac]
                                  for mac in interface['raw_macs']]
                 slaves = ' '.join(slave_devices)
@@ -405,7 +409,11 @@ def write_debian_interfaces(interfaces, sys_interfaces):
                         interface['mac_address'])
                 result += "    bond-mode {0}\n".format(interface['bond_mode'])
                 result += "    bond-miimon {0}\n".format(
-                    interface['bond_miimon'])
+                    interface.get('bond_miimon', 0))
+                result += "    bond-lacp-rate {0}\n".format(
+                    interface.get('bond_lacp_rate', 'slow'))
+                result += "    bond-xmit_hash_policy {0}\n".format(
+                    interface.get('bond_xmit_hash_policy', 'layer2'))
                 slave_devices = [sys_interfaces[mac]
                                  for mac in interface['raw_macs']]
                 slaves = ' '.join(slave_devices)
@@ -436,7 +444,11 @@ def write_debian_interfaces(interfaces, sys_interfaces):
                     interface['mac_address'])
             result += "    bond-mode {0}\n".format(interface['bond_mode'])
             result += "    bond-miimon {0}\n".format(
-                interface['bond_miimon'])
+                interface.get('bond_miimon', 0))
+            result += "    bond-lacp-rate {0}\n".format(
+                interface.get('bond_lacp_rate', 'slow'))
+            result += "    bond-xmit_hash_policy {0}\n".format(
+                interface.get('bond_xmit_hash_policy', 'layer2'))
             slave_devices = [sys_interfaces[mac]
                              for mac in interface['raw_macs']]
             slaves = ' '.join(slave_devices)
