@@ -133,6 +133,8 @@ def write_redhat_interfaces(interfaces, sys_interfaces):
                 continue
 
         if 'vlan_id' in interface:
+            # raw_macs will have a single entry if the vlan device is a
+            # phsical device and >1 when it is a bond device.
             if len(raw_macs) == 1:
                 vlan_raw_device = sys_interfaces.get(raw_macs[0])
             else:
@@ -360,6 +362,8 @@ def write_debian_interfaces(interfaces, sys_interfaces):
 
         vlan_raw_device = None
         if 'vlan_id' in interface:
+            # raw_macs will have a single entry if the vlan device is a
+            # phsical device and >1 when it is a bond device.
             if len(raw_macs) == 1:
                 vlan_raw_device = sys_interfaces.get(raw_macs[0])
             else:
