@@ -13,10 +13,10 @@ auto eth1
 iface eth1 inet static
     address 10.208.169.118
     netmask 255.255.224.0
-    post-up route add -net 10.176.0.0 netmask 255.240.0.0 gw 10.208.160.1 || true
-    pre-down route del -net 10.176.0.0 netmask 255.240.0.0 gw 10.208.160.1 || true
-    post-up route add -net 10.208.0.0 netmask 255.240.0.0 gw 10.208.160.1 || true
-    pre-down route del -net 10.208.0.0 netmask 255.240.0.0 gw 10.208.160.1 || true
+    up route add -net 10.176.0.0 netmask 255.240.0.0 gw 10.208.160.1 || true
+    down route del -net 10.176.0.0 netmask 255.240.0.0 gw 10.208.160.1 || true
+    up route add -net 10.208.0.0 netmask 255.240.0.0 gw 10.208.160.1 || true
+    down route del -net 10.208.0.0 netmask 255.240.0.0 gw 10.208.160.1 || true
 ### Write /etc/network/interfaces.d/eth3.cfg
 auto eth3
 iface eth3 inet dhcp

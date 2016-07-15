@@ -13,10 +13,10 @@ auto eth1
 iface eth1 inet static
     address 10.208.169.118
     netmask 255.255.224.0
-    post-up route add -net 10.176.0.0 netmask 255.240.0.0 gw 10.208.160.1 || true
-    pre-down route del -net 10.176.0.0 netmask 255.240.0.0 gw 10.208.160.1 || true
-    post-up route add -net 10.208.0.0 netmask 255.240.0.0 gw 10.208.160.1 || true
-    pre-down route del -net 10.208.0.0 netmask 255.240.0.0 gw 10.208.160.1 || true
+    up route add -net 10.176.0.0 netmask 255.240.0.0 gw 10.208.160.1 || true
+    down route del -net 10.176.0.0 netmask 255.240.0.0 gw 10.208.160.1 || true
+    up route add -net 10.208.0.0 netmask 255.240.0.0 gw 10.208.160.1 || true
+    down route del -net 10.208.0.0 netmask 255.240.0.0 gw 10.208.160.1 || true
 ### Write /etc/network/interfaces.d/eth3.cfg
 auto eth3
 iface eth3 inet dhcp
@@ -46,7 +46,9 @@ iface bond0 inet dhcp
     bond-miimon 100
     bond-lacp-rate slow
     bond-xmit_hash_policy layer3+4
-    bond-slaves eth5 eth6
+    bond-slaves none
+    post-up ifenslave bond0 eth5 eth6
+    pre-down ifenslave -d bond0 eth5 eth6
 ### Write /etc/network/interfaces.d/eth7.cfg
 auto eth7
 iface eth7 inet manual
@@ -63,7 +65,9 @@ iface bond1 inet manual
     bond-miimon 100
     bond-lacp-rate slow
     bond-xmit_hash_policy layer3+4
-    bond-slaves eth7 eth8
+    bond-slaves none
+    post-up ifenslave bond1 eth7 eth8
+    pre-down ifenslave -d bond1 eth7 eth8
 ### Write /etc/network/interfaces.d/bond1.27.cfg
 auto bond1.27
 iface bond1.27 inet dhcp

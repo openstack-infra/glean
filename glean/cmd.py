@@ -30,8 +30,10 @@ from glean import systemlock
 
 log = logging.getLogger("glean")
 
-post_up = "    post-up route add -net {net} netmask {mask} gw {gw} || true\n"
-pre_down = "    pre-down route del -net {net} netmask {mask} gw {gw} || true\n"
+route_add = "    up route add -net {net} netmask {mask} gw {gw} || true\n"
+route_del = "    down route del -net {net} netmask {mask} gw {gw} || true\n"
+slaves_add = "    post-up ifenslave {0} {1}\n"
+slaves_del = "    pre-down ifenslave -d {0} {1}\n"
 
 
 # Type value for permanent mac addrs as defined by the linux kernel.
@@ -401,7 +403,9 @@ def write_debian_interfaces(interfaces, sys_interfaces):
                 slave_devices = [sys_interfaces[mac]
                                  for mac in interface['raw_macs']]
                 slaves = ' '.join(slave_devices)
-                result += "    bond-slaves {0}\n".format(slaves)
+                result += "    bond-slaves none\n"
+                result += slaves_add.format(interface_name, slaves)
+                result += slaves_del.format(interface_name, slaves)
             files_to_write[iface_path] = result
             continue
 
@@ -425,7 +429,9 @@ def write_debian_interfaces(interfaces, sys_interfaces):
                 slave_devices = [sys_interfaces[mac]
                                  for mac in interface['raw_macs']]
                 slaves = ' '.join(slave_devices)
-                result += "    bond-slaves {0}\n".format(slaves)
+                result += "    bond-slaves none\n"
+                result += slaves_add.format(interface_name, slaves)
+                result += slaves_del.format(interface_name, slaves)
             files_to_write[iface_path] = result
             continue
 
@@ -460,17 +466,19 @@ def write_debian_interfaces(interfaces, sys_interfaces):
             slave_devices = [sys_interfaces[mac]
                              for mac in interface['raw_macs']]
             slaves = ' '.join(slave_devices)
-            result += "    bond-slaves {0}\n".format(slaves)
+            result += "    bond-slaves none\n"
+            result += slaves_add.format(interface_name, slaves)
+            result += slaves_del.format(interface_name, slaves)
         result += "    address {0}\n".format(interface['ip_address'])
         result += "    netmask {0}\n".format(interface['netmask'])
         for route in interface['routes']:
             if route['network'] == '0.0.0.0' and route['netmask'] == '0.0.0.0':
                 result += "    gateway {0}\n".format(route['gateway'])
             else:
-                result += post_up.format(
+                result += route_add.format(
                     net=route['network'], mask=route['netmask'],
                     gw=route['gateway'])
-                result += pre_down.format(
+                result += route_del.format(
                     net=route['network'], mask=route['netmask'],
                     gw=route['gateway'])
         files_to_write[iface_path] = result
