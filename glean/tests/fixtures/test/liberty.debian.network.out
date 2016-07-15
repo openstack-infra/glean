@@ -44,6 +44,8 @@ iface bond0 inet dhcp
     hwaddress bc:76:4e:05:7b:13
     bond-mode 802.3ad
     bond-miimon 100
+    bond-lacp-rate slow
+    bond-xmit_hash_policy layer3+4
     bond-slaves eth5 eth6
 ### Write /etc/network/interfaces.d/eth7.cfg
 auto eth7
@@ -59,6 +61,8 @@ iface bond1 inet manual
     hwaddress bc:76:4e:05:7b:15
     bond-mode 802.3ad
     bond-miimon 100
+    bond-lacp-rate slow
+    bond-xmit_hash_policy layer3+4
     bond-slaves eth7 eth8
 ### Write /etc/network/interfaces.d/bond1.27.cfg
 auto bond1.27
@@ -71,6 +75,8 @@ iface bond2 inet static
     hwaddress bc:76:4e:05:7b:17
     bond-mode 802.3ad
     bond-miimon 100
+    bond-lacp-rate slow
+    bond-xmit_hash_policy layer3+4
     bond-slaves eth9 eth10
     address 192.0.2.2
     netmask 255.255.255.0
