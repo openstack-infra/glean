@@ -672,10 +672,20 @@ def interface_live(iface, sys_root, args):
     return False
 
 
-def is_interface_vlan(iface):
-    file_name = '/etc/network/interfaces.d/%s.cfg' % iface
-    if os.path.exists(file_name):
-        return 'vlan-raw-device' in open(file_name).read()
+def is_interface_vlan(iface, distro):
+    if distro in ('debian', 'ubuntu'):
+        file_name = '/etc/network/interfaces.d/%s.cfg' % iface
+        if os.path.exists(file_name):
+            return 'vlan-raw-device' in open(file_name).read()
+    elif distro in ('redhat', 'centos', 'fedora', 'suse', 'opensuse'):
+        file_name = '/etc/sysconfig/network-scripts/ifcfg-%s' % iface
+        if os.path.exists(file_name):
+            return 'VLAN=YES' in open(file_name).read()
+    elif distro in ('gentoo'):
+        file_name = '/etc/conf.d/net.%s' % iface
+        if os.path.exists(file_name):
+            return 'vlan_id' in open(file_name).read()
+
     return False
 
 
@@ -694,7 +704,7 @@ def get_sys_interfaces(interface, args):
                       if not f.startswith(ignored_interfaces)]
     for iface in interfaces:
         # if interface is for an already configured vlan, skip it
-        if is_interface_vlan(iface):
+        if is_interface_vlan(iface, args.distro):
             log.debug("Skipping vlan %s" % iface)
             continue
 
