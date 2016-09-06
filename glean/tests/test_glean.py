@@ -153,8 +153,11 @@ class TestGlean(base.BaseTestCase):
 
         self.useFixture(fixtures.MonkeyPatch('platform.dist', fake_distro))
 
-    def _assert_distro_provider(self, distro, provider):
-        self._patch_argv(['--hostname'])
+    def _assert_distro_provider(self, distro, provider, interface=None):
+        argv = ['--hostname']
+        if interface:
+            argv.append('--interface=%s' % interface)
+        self._patch_argv(argv)
         self._patch_files(provider)
         self._patch_distro(distro)
 
@@ -188,6 +191,8 @@ class TestGlean(base.BaseTestCase):
             write_blocks.append((write_dest, write_content))
 
         for dest, content in write_blocks:
+            if interface and interface not in dest:
+                continue
             self.assertNotIn("eth2", dest)
             self.assertIn(dest, self.file_handle_mocks)
             write_handle = self.file_handle_mocks[dest].write
@@ -225,3 +230,10 @@ class TestGlean(base.BaseTestCase):
     def test_glean(self):
         with mock.patch('glean.systemlock.Lock'):
             self._assert_distro_provider(self.distro, self.style)
+
+    # In the systemd case, we are a templated unit file
+    # (glean@.service) so we get called once for each interface that
+    # comes up with "--interface".  This simulates that.
+    def test_glean_systemd(self):
+        with mock.patch('glean.systemlock.Lock'):
+            self._assert_distro_provider(self.distro, self.style, 'eth0')
