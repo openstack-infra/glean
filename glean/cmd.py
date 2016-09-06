@@ -129,10 +129,12 @@ def write_redhat_interfaces(interfaces, sys_interfaces):
             interfaces.items(), key=lambda x: x[1]['id']):
         if interface['type'] == 'ipv6':
             continue
+        # sys_interfaces is pruned by --interface; if one of the
+        # raw_macs (or, *the* MAC for single interfaces) does not
+        # match as one of the interfaces we want configured, skip
         raw_macs = interface.get('raw_macs', [interface['mac_address']])
-        for mac in raw_macs:
-            if mac not in sys_interfaces:
-                continue
+        if not set(sys_interfaces).intersection(set(raw_macs)):
+            continue
 
         if 'vlan_id' in interface:
             # raw_macs will have a single entry if the vlan device is a
@@ -286,10 +288,12 @@ def write_gentoo_interfaces(interfaces, sys_interfaces):
             interfaces.items(), key=lambda x: x[1]['id']):
         if interface['type'] == 'ipv6':
             continue
+        # sys_interfaces is pruned by --interface; if one of the
+        # raw_macs (or, *the* MAC for single interfaces) does not
+        # match as one of the interfaces we want configured, skip
         raw_macs = interface.get('raw_macs', [interface['mac_address']])
-        for mac in raw_macs:
-            if mac not in sys_interfaces:
-                continue
+        if not set(sys_interfaces).intersection(set(raw_macs)):
+            continue
 
         if 'bond_mode' in interface:
             interface['slaves'] = [
@@ -357,10 +361,12 @@ def write_debian_interfaces(interfaces, sys_interfaces):
     files_to_write[eni_path] += "source /etc/network/interfaces.d/*.cfg\n"
     # Sort the interfaces by id so that we'll have consistent output order
     for iname, interface in interfaces.items():
+        # sys_interfaces is pruned by --interface; if one of the
+        # raw_macs (or, *the* MAC for single interfaces) does not
+        # match as one of the interfaces we want configured, skip
         raw_macs = interface.get('raw_macs', [interface['mac_address']])
-        for mac in raw_macs:
-            if mac not in sys_interfaces:
-                continue
+        if not set(sys_interfaces).intersection(set(raw_macs)):
+            continue
 
         vlan_raw_device = None
         if 'vlan_id' in interface:
