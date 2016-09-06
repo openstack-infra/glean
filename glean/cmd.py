@@ -689,6 +689,23 @@ def is_interface_vlan(iface, distro):
     return False
 
 
+def is_interface_bridge(iface, distro):
+    if distro in ('debian', 'ubuntu'):
+        file_name = '/etc/network/interfaces.d/%s.cfg' % iface
+        if os.path.exists(file_name):
+            return 'bridge_ports' in open(file_name).read().lower()
+    elif distro in ('redhat', 'centos', 'fedora', 'suse', 'opensuse'):
+        file_name = '/etc/sysconfig/network-scripts/ifcfg-%s' % iface
+        if os.path.exists(file_name):
+            return 'type=bridge' in open(file_name).read().lower()
+    elif distro in ('gentoo'):
+        file_name = '/etc/conf.d/net.%s' % iface
+        if os.path.exists(file_name):
+            return 'bridge' in open(file_name).read().lower()
+
+    return False
+
+
 def get_sys_interfaces(interface, args):
     log.debug("Probing system interfaces")
     sys_root = os.path.join(args.root, 'sys/class/net')
@@ -706,6 +723,11 @@ def get_sys_interfaces(interface, args):
         # if interface is for an already configured vlan, skip it
         if is_interface_vlan(iface, args.distro):
             log.debug("Skipping vlan %s" % iface)
+            continue
+
+        # if interface is for an already configured bridge, skip it
+        if is_interface_bridge(iface, args.distro):
+            log.debug("Skipping bridge %s" % iface)
             continue
 
         mac_addr_type = open(
