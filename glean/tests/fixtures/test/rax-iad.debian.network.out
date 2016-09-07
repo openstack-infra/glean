@@ -1,0 +1,28 @@
+### Write /etc/resolv.conf
+nameserver 69.20.0.196
+nameserver 69.20.0.164
+### Write /etc/network/interfaces
+auto lo
+iface lo inet loopback
+source /etc/network/interfaces.d/*.cfg
+### Write /etc/network/interfaces.d/eth0.cfg
+auto eth0
+iface eth0 inet static
+    address 146.20.110.113
+    netmask 255.255.255.0
+    gateway 146.20.110.1
+iface eth0 inet6 static
+    address 2001:4802:7807:103:be76:4eff:fe20:d72f
+    netmask 64
+    gateway fe80::def
+    up ip -6 route add fd30::/48 via fe80::f001 dev eth0 || true
+    down ip -6 route del fd30::/48 via fe80::f001 dev eth0 || true
+### Write /etc/network/interfaces.d/eth1.cfg
+auto eth1
+iface eth1 inet static
+    address 10.210.32.174
+    netmask 255.255.224.0
+    up route add -net 10.176.0.0 netmask 255.240.0.0 gw 10.210.32.1 || true
+    down route del -net 10.176.0.0 netmask 255.240.0.0 gw 10.210.32.1 || true
+    up route add -net 10.208.0.0 netmask 255.240.0.0 gw 10.210.32.1 || true
+    down route del -net 10.208.0.0 netmask 255.240.0.0 gw 10.210.32.1 || true

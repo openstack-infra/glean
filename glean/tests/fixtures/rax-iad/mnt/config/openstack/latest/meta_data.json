@@ -1,0 +1,14 @@
+{
+  "admin_pass": "2auHHNJeUQov",
+  "random_seed": "91YkWdB6mCNgj3M9\/YBLs8nh0jc7TXYULVfvxadK9zla5g+MaOdTRbzDH6Xq\/4zlYj82uJtvEYzdZ7s2cPVZ1NPg67i99QKwEPVe1f+pHaTcBnuY1GNXigK3p1irCEUjiD278VQAPMX1UsJsF+WTbbwMafDLBu85X7v9xyD7Eatz4+jxruxIEp+\/2aHzQUfMm8MV6BM7V1FY1F10i49yb5vJRSp8E4vAb1Qgn2qABJucnsv8FXFxUYugHysMNnMvm6uH9Aeu4L1VjE0VVCk9PeurPRwglXr4zaIUjQjEESGD6kHFe89M8kRY+tEeuLPH5dCCXc6wtAh3NoBiXDNSVdZXyPgsxg5bkm+9bynKiichEdpt\/RE761Ey1LfTVru61pqA6bxV1XdRYEvVJBWdRrYs07rQfL4Pyd0Gt3abpy8GRxNLhj\/dI7snCJ8YMr\/XXThJnqPjKoZde9KNSb53VrxtorgxswS\/PcIK91r7qZu8xuWCLwO8ytq0rU2fA7zDJfPAi3gaWNRH4WbyYMzIibCfOfkFIlP1lz\/MUe\/+VVzWk7c98OM5blfEoUf8ufzHxvXBeDcWkFI7F9Ywp+GQ7eC5C+KI3wTOX66baRj0Pg7llPEfyeXUJ37mvMY70xuefIiLxK8AXYIuyZAC6eIXKT3aMViq9mRK7QX4JIwOpbM=",
+  "uuid": "e5bf01c5-5be7-4c2e-b436-14e0ee5ac855",
+  "availability_zone": "nova",
+  "hostname": "pabelanger-test",
+  "launch_index": 0,
+  "project_id": "637776",
+  "network_config": {
+    "content_path": "\/content\/0000",
+    "name": "network_config"
+  },
+  "name": "pabelanger-test"
+}

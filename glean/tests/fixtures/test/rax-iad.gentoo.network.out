@@ -1,0 +1,14 @@
+### Write /etc/resolv.conf
+nameserver 69.20.0.196
+nameserver 69.20.0.164
+### Write /etc/conf.d/net.eth0
+# Automatically generated, do not edit
+config_eth0="146.20.110.113 netmask 255.255.255.0"
+mac_eth0="bc:76:4e:20:d7:2f"
+routes_eth0="default via 146.20.110.1"
+### Write /etc/conf.d/net.eth1
+# Automatically generated, do not edit
+config_eth1="10.210.32.174 netmask 255.255.224.0"
+mac_eth1="bc:76:4e:20:d7:33"
+routes_eth1="10.176.0.0 netmask 255.240.0.0 via 10.210.32.1
+10.208.0.0 netmask 255.240.0.0 via 10.210.32.1"

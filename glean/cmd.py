@@ -17,6 +17,7 @@
 
 import argparse
 import contextlib
+import copy
 import errno
 import json
 import logging
@@ -28,11 +29,10 @@ import sys
 import time
 
 from glean import systemlock
+from glean import utils
 
 log = logging.getLogger("glean")
 
-route_add = "    up route add -net {net} netmask {mask} gw {gw} || true\n"
-route_del = "    down route del -net {net} netmask {mask} gw {gw} || true\n"
 slaves_add = "    post-up ifenslave {0} {1}\n"
 slaves_del = "    pre-down ifenslave -d {0} {1}\n"
 
@@ -384,7 +384,8 @@ def write_debian_interfaces(interfaces, sys_interfaces):
     files_to_write[eni_path] = "auto lo\niface lo inet loopback\n"
     files_to_write[eni_path] += "source /etc/network/interfaces.d/*.cfg\n"
     # Sort the interfaces by id so that we'll have consistent output order
-    for iname, interface in interfaces.items():
+    for iname, interface in sorted(
+            interfaces.items(), key=lambda x: x[1]['id']):
         # sys_interfaces is pruned by --interface; if one of the
         # raw_macs (or, *the* MAC for single interfaces) does not
         # match as one of the interfaces we want configured, skip
@@ -415,8 +416,8 @@ def write_debian_interfaces(interfaces, sys_interfaces):
         iface_path = os.path.join(eni_d_path, '%s.cfg' % interface_name)
 
         if interface['type'] == 'ipv4_dhcp':
-            result = "auto {0}\n".format(interface_name)
-            result += "iface {0} inet dhcp\n".format(interface_name)
+            header = "auto {0}\n".format(interface_name)
+            result = "iface {0} inet dhcp\n".format(interface_name)
             if vlan_raw_device is not None:
                 result += "    vlan-raw-device {0}\n".format(vlan_raw_device)
                 result += "    hw-mac-address {0}\n".format(
@@ -438,12 +439,16 @@ def write_debian_interfaces(interfaces, sys_interfaces):
                 result += "    bond-slaves none\n"
                 result += slaves_add.format(interface_name, slaves)
                 result += slaves_del.format(interface_name, slaves)
-            files_to_write[iface_path] = result
+            if iface_path in files_to_write:
+                # There are more than one address for this interface
+                files_to_write[iface_path] += result
+            else:
+                files_to_write[iface_path] = header + result
             continue
 
         if interface['type'] == 'manual':
-            result = "auto {0}\n".format(interface_name)
-            result += "iface {0} inet manual\n".format(interface_name)
+            header = "auto {0}\n".format(interface_name)
+            result = "iface {0} inet manual\n".format(interface_name)
             if 'bond_master' in interface:
                 result += "    bond-master {0}\n".format(
                     interface['bond_master'])
@@ -464,7 +469,11 @@ def write_debian_interfaces(interfaces, sys_interfaces):
                 result += "    bond-slaves none\n"
                 result += slaves_add.format(interface_name, slaves)
                 result += slaves_del.format(interface_name, slaves)
-            files_to_write[iface_path] = result
+            if iface_path in files_to_write:
+                # There are more than one address for this interface
+                files_to_write[iface_path] += result
+            else:
+                files_to_write[iface_path] = header + result
             continue
 
         if interface['type'] == 'ipv6':
@@ -476,8 +485,8 @@ def write_debian_interfaces(interfaces, sys_interfaces):
         if not link_type:
             continue
 
-        result = "auto {0}\n".format(interface_name)
-        result += "iface {name} {link_type} static\n".format(
+        header = "auto {0}\n".format(interface_name)
+        result = "iface {name} {link_type} static\n".format(
             name=interface_name, link_type=link_type)
         if vlan_raw_device:
             result += "    vlan-raw-device {0}\n".format(vlan_raw_device)
@@ -502,18 +511,45 @@ def write_debian_interfaces(interfaces, sys_interfaces):
             result += slaves_add.format(interface_name, slaves)
             result += slaves_del.format(interface_name, slaves)
         result += "    address {0}\n".format(interface['ip_address'])
-        result += "    netmask {0}\n".format(interface['netmask'])
+
+        if interface['type'] == 'ipv4':
+            result += "    netmask {0}\n".format(interface['netmask'])
+        else:
+            result += "    netmask {0}\n".format(
+                utils.ipv6_netmask_length(interface['netmask']))
+
         for route in interface['routes']:
-            if route['network'] == '0.0.0.0' and route['netmask'] == '0.0.0.0':
+            if ((route['network'] == '0.0.0.0' and
+                    route['netmask'] == '0.0.0.0') or
+                (route['network'] == '::' and
+                    route['netmask'] == '::')):
                 result += "    gateway {0}\n".format(route['gateway'])
             else:
+                if interface['type'] == 'ipv4':
+                    route_add = ("    up route add -net {net} netmask "
+                                 "{mask} gw {gw} || true\n")
+                    route_del = ("    down route del -net {net} netmask "
+                                 "{mask} gw {gw} || true\n")
+                    _netmask = route['netmask']
+                else:
+                    route_add = ("    up ip -6 route add {net}/{mask} "
+                                 "via {gw} dev {interface} || true\n")
+                    route_del = ("    down ip -6 route del {net}/{mask} "
+                                 "via {gw} dev {interface} || true\n")
+                    _netmask = utils.ipv6_netmask_length(route['netmask'])
+
                 result += route_add.format(
-                    net=route['network'], mask=route['netmask'],
-                    gw=route['gateway'])
+                    net=route['network'], mask=_netmask, gw=route['gateway'],
+                    interface=interface_name)
                 result += route_del.format(
-                    net=route['network'], mask=route['netmask'],
-                    gw=route['gateway'])
-        files_to_write[iface_path] = result
+                    net=route['network'], mask=_netmask, gw=route['gateway'],
+                    interface=interface_name)
+
+        if iface_path in files_to_write:
+            # There are more than one address for this interface
+            files_to_write[iface_path] += result
+        else:
+            files_to_write[iface_path] = header + result
 
     for mac, iname in sorted(
             sys_interfaces.items(), key=lambda x: x[1]):
@@ -593,15 +629,17 @@ def get_config_drive_interfaces(net):
             link['type'] = 'manual'
             interfaces[link['id']] = link
 
-    for i, network in networks.items():
-        link = vlans.get(i, phys.get(i, bonds.get(i)))
+    for network in net['networks']:
+        link = vlans.get(
+            network['link'],
+            phys.get(network['link'], bonds.get(network['link'])))
         if not link:
             continue
+
         link.update(network)
-        link['id'] = i
         # NOTE(pabelanger): Make sure we index by the existing network id,
         # rather then creating out own.
-        interfaces[network['id']] = link
+        interfaces[network['id']] = copy.deepcopy(link)
 
     return interfaces
 
