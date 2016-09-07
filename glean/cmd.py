@@ -146,7 +146,9 @@ def write_redhat_interfaces(interfaces, sys_interfaces):
             interface_name = "{0}.{1}".format(
                 vlan_raw_device, interface['vlan_id'])
         elif 'bond_mode' in interface:
-            interface_name = iname
+            # It is possible our interface does not have a link, so fall back
+            # to iname which is the link id.
+            interface_name = interface.get('link', iname)
         else:
             interface_name = sys_interfaces[interface['mac_address']]
 
@@ -314,8 +316,11 @@ def write_gentoo_interfaces(interfaces, sys_interfaces):
         if len(raw_macs) == 1:
             interface_name = sys_interfaces[raw_macs[0]]
         else:
+            # It is possible our interface does not have a link, so
+            # fall back to interface id.
             interface_name = next(
-                intf['id'] for intf in interfs if 'bond_mode' in intf)
+                intf.get('link', intf['id']) for intf in interfs
+                if 'bond_mode' in intf)
         files_to_write.update(
             _write_gentoo_interface(interface_name, interfs))
         _setup_gentoo_network_init(interface_name, interfs)
@@ -379,7 +384,9 @@ def write_debian_interfaces(interfaces, sys_interfaces):
             interface_name = "{0}.{1}".format(vlan_raw_device,
                                               interface['vlan_id'])
         elif 'bond_mode' in interface:
-            interface_name = iname
+            # It is possible our interface does not have a link, so fall back
+            # to iname which is the link id.
+            interface_name = interface.get('link', iname)
         else:
             interface_name = sys_interfaces[interface['mac_address']]
 
@@ -573,7 +580,9 @@ def get_config_drive_interfaces(net):
             continue
         link.update(network)
         link['id'] = i
-        interfaces[i] = link
+        # NOTE(pabelanger): Make sure we index by the existing network id,
+        # rather then creating out own.
+        interfaces[network['id']] = link
 
     return interfaces
 
