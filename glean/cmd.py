@@ -662,6 +662,7 @@ def is_interface_live(interface, sys_root):
 
 
 def interface_live(iface, sys_root, args):
+    log.debug("Checking if interface %s has an active link carrier." % iface)
     if is_interface_live(iface, sys_root):
         return True
 
@@ -675,6 +676,7 @@ def interface_live(iface, sys_root, args):
         if is_interface_live(iface, sys_root):
             return True
         time.sleep(.1)
+    log.debug("Interface %s appears not to have an active link." % iface)
     return False
 
 
