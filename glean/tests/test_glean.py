@@ -32,8 +32,8 @@ sample_data_path = os.path.join(
 distros = ['Ubuntu', 'Debian', 'Fedora', 'RedHat', 'CentOS', 'Gentoo']
 styles = ['hp', 'rax', 'liberty', 'nokey']
 ips = {'hp': '127.0.1.1',
-       'rax': '10.208.169.118',
-       'liberty': '192.0.2.2',
+       'rax': '23.253.229.154',
+       'liberty': '23.253.229.154',
        'nokey': '127.0.1.1'}
 
 built_scenarios = []
