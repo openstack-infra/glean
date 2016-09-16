@@ -806,7 +806,10 @@ def get_sys_interfaces(interface, args):
 
         mac_addr_type = open(
             '%s/%s/addr_assign_type' % (sys_root, iface), 'r').read().strip()
-        # TODO why? is it not valid to configure randomly assigned mac addrs?
+        # Interfaces without a permanent address are likely created by some
+        # other system on the host like a running neutron agent. In these cases
+        # that system should be responsible for configuring the interface not
+        # glean.
         if mac_addr_type != PERMANENT_ADDR_TYPE:
             continue
         mac = open('%s/%s/address' % (sys_root, iface), 'r').read().strip()

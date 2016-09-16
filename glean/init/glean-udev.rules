@@ -1,1 +1,1 @@
-SUBSYSTEM=="net", ACTION=="add", TAG+="systemd", ENV{SYSTEMD_WANTS}+="glean@$name.service"
+SUBSYSTEM=="net", ACTION=="add", ATTR{addr_assign_type}=="0", TAG+="systemd", ENV{SYSTEMD_WANTS}+="glean@$name.service"
