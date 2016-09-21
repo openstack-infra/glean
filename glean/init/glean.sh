@@ -56,10 +56,6 @@ if blkid -t LABEL="config-2" ; then
     glean --ssh --skip-network --hostname
 fi
 
-if [ -f /usr/bin/dpkg ] ; then
-    test -f /etc/ssh/ssh_host_rsa_key || dpkg-reconfigure openssh-server || true
-fi
-
 if [ -n "$INTERFACE" ]; then
     glean --interface "${INTERFACE}"
 else
