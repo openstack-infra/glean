@@ -1,0 +1,15 @@
+### Write /etc/sysconfig/network/ifcfg-eth0
+# Automatically generated, do not edit
+BOOTPROTO=dhcp
+LLADDR=bc:76:4e:01:62:86
+STARTMODE=auto
+### Write /etc/sysconfig/network/ifcfg-eth1
+# Automatically generated, do not edit
+BOOTPROTO=dhcp
+LLADDR=bc:76:4e:05:7b:06
+STARTMODE=auto
+### Write /etc/sysconfig/network/ifcfg-eth3
+# Automatically generated, do not edit
+BOOTPROTO=dhcp
+LLADDR=bc:76:4e:12:a4:bb
+STARTMODE=auto
