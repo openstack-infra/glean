@@ -66,30 +66,143 @@ def _exists_rh_interface(name):
     return os.path.exists(file_to_check)
 
 
-def _write_rh_interface(name, interface):
+def _is_suse(distro):
+    return distro in ('suse', 'opensuse')
+
+
+def _network_files(distro):
+    network_files = {}
+    if _is_suse(distro):
+        # network.service is an alias to wicked.service on SUSE
+        # and openSUSE images so use that instead of network.service
+        # since systemd refuses to treat aliases as normal services
+        network_files = {
+            "systemd": "wicked.service",
+            "ifcfg": "/etc/sysconfig/network/ifcfg",
+            "route": "/etc/sysconfig/network/ifroute",
+        }
+    else:
+        network_files = {
+            "systemd": "network.service",
+            "ifcfg": "/etc/sysconfig/network-scripts/ifcfg",
+            "route": "/etc/sysconfig/network-scripts/route",
+        }
+
+    return network_files
+
+
+def _network_config(distro):
+    network_config = {}
+    if _is_suse(distro):
+        header = "\n".join(["# Automatically generated, do not edit",
+                            "BOOTPROTO={bootproto}",
+                            "LLADDR={hwaddr}"])
+        footer = "STARTMODE=auto" + "\n"
+
+        network_config = {
+            "static": "\n".join([header,
+                                 "IPADDR={ip_address}",
+                                 "NETMASK={netmask}",
+                                 footer])
+        }
+    else:
+        header = "\n".join(["# Automatically generated, do not edit",
+                            "DEVICE={name}",
+                            "BOOTPROTO={bootproto}",
+                            "HWADDR={hwaddr}"])
+        footer = "\n".join(["ONBOOT=yes", "NM_CONTROLLED=no",
+                            "TYPE=Ethernet"]) + "\n"
+
+        network_config = {
+            # RedHat does not use TYPE=Ethernet in the static configurations
+            "static": "\n".join([header,
+                                 "IPADDR={ip_address}",
+                                 "NETMASK={netmask}",
+                                 footer.replace("TYPE=Ethernet\n", "")])
+        }
+
+    # RedHat does not use TYPE=Ethernet in the dhcp configurations
+    network_config["dhcp"] = "\n".join([header, footer])
+    network_config["none"] = "\n".join([header, footer])
+
+    return network_config
+
+
+def _set_rh_bonding(name, interface, distro, results):
+    if not any(bond in ['bond_slaves', 'bond_master'] for bond in interface):
+        return results
+
+    # Careful, we are operating on the live 'results' variable
+    # so we need to always append our data
+    if _is_suse(distro):
+        # SUSE configures the slave interfaces on the master ifcfg file.
+        # The master interface contains a 'bond_slaves' key containing a list
+        # of the slave interfaces
+        if 'bond_slaves' in interface:
+            results += "BONDING_MASTER=yes\n"
+            slave_cnt = 0
+            for slave in interface['bond_slaves']:
+                results += "BONDING_SLAVE_{id}={name}\n".format(
+                    id=slave_cnt, name=slave)
+                slave_cnt += 1
+        else:
+            # Slave interfaces do not know they are part of a bonded
+            # interface. All we need to do is to set the STARTMODE
+            # to hotplug
+            results = results.replace("=auto", "=hotplug")
+
+    else:
+        # RedHat does not add any specific configuration to the master
+        # interface. All configuration is done in the slave ifcfg files.
+        if 'bond_slaves' in interface:
+            return results
+
+        results += "SLAVE=yes\n"
+        results += "MASTER={0}\n".format(interface['bond_master'])
+
+    return results
+
+
+def _set_rh_vlan(name, interface, distro):
+    results = ""
+
+    if 'vlan_id' not in interface:
+        return results
+
+    if _is_suse(distro):
+        results += "VLAN_ID={vlan_id}\n".format(vlan_id=interface['vlan_id'])
+        results += "ETHERDEVICE={etherdevice}\n".format(
+            etherdevice=name.split('.')[0])
+    else:
+        results += "VLAN=yes\n"
+
+    return results
+
+
+def _write_rh_interface(name, interface, distro):
     files_to_write = dict()
-    results = """# Automatically generated, do not edit
-DEVICE={name}
-BOOTPROTO=static
-HWADDR={hwaddr}
-IPADDR={ip_address}
-NETMASK={netmask}
-ONBOOT=yes
-NM_CONTROLLED=no
-""".format(
+    results = _network_config(distro)["static"].format(
+        bootproto="static",
         name=name,
         hwaddr=interface['mac_address'],
         ip_address=interface['ip_address'],
         netmask=interface['netmask'],
 
     )
-    if 'vlan_id' in interface:
-        results += "VLAN=yes\n"
+    results += _set_rh_vlan(name, interface, distro)
+    # set_rh_bonding takes results as argument so we need to assign
+    # the return value, not append it
+    results = _set_rh_bonding(name, interface, distro, results)
     routes = []
     for route in interface['routes']:
         if route['network'] == '0.0.0.0' and route['netmask'] == '0.0.0.0':
-            results += "DEFROUTE=yes\n"
-            results += "GATEWAY={gw}\n".format(gw=route['gateway'])
+            if not _is_suse(distro):
+                results += "DEFROUTE=yes\n"
+                results += "GATEWAY={gw}\n".format(gw=route['gateway'])
+            else:
+                # Special notation for default route on SUSE/wicked
+                routes.append(dict(
+                    net='default', mask='', gw=route['gateway']))
         else:
             routes.append(dict(
                 net=route['network'], mask=route['netmask'],
@@ -98,50 +211,48 @@ NM_CONTROLLED=no
     if routes:
         route_content = ""
         for x in range(0, len(routes)):
-            route_content += "ADDRESS{x}={net}\n".format(x=x, **routes[x])
-            route_content += "NETMASK{x}={mask}\n".format(x=x, **routes[x])
-            route_content += "GATEWAY{x}={gw}\n".format(x=x, **routes[x])
-        files_to_write['/etc/sysconfig/network-scripts/route-{name}'.format(
-            name=name)] = route_content
-    files_to_write['/etc/sysconfig/network-scripts/ifcfg-{name}'.format(
+            if not _is_suse(distro):
+                route_content += "ADDRESS{x}={net}\n".format(x=x, **routes[x])
+                route_content += "NETMASK{x}={mask}\n".format(x=x, **routes[x])
+                route_content += "GATEWAY{x}={gw}\n".format(x=x, **routes[x])
+            else:
+                # Avoid the extra trailing whitespace for the default route
+                # because mask is empty in that case.
+                route_content += "{net} {gw} {mask}\n".format(
+                    **routes[x]).replace(' \n', '\n')
+        files_to_write[_network_files(distro)["route"] + '-{name}'
+                       .format(name=name)] = route_content
+    files_to_write[_network_files(distro)["ifcfg"] + '-{name}'.format(
         name=name)] = results
+
     return files_to_write
 
 
-def _write_rh_dhcp(name, interface):
-    filename = '/etc/sysconfig/network-scripts/ifcfg-{name}'.format(name=name)
-    results = """# Automatically generated, do not edit
-DEVICE={name}
-BOOTPROTO=dhcp
-HWADDR={hwaddr}
-ONBOOT=yes
-NM_CONTROLLED=no
-TYPE=Ethernet
-""".format(name=name, hwaddr=interface['mac_address'])
-    if 'vlan_id' in interface:
-        results += "VLAN=yes\n"
+def _write_rh_dhcp(name, interface, distro):
+    filename = _network_files(distro)["ifcfg"] + '-{name}'.format(name=name)
+    results = _network_config(distro)["dhcp"].format(
+        bootproto="dhcp", name=name, hwaddr=interface['mac_address'])
+    results += _set_rh_vlan(name, interface, distro)
+    # set_rh_bonding takes results as argument so we need to assign
+    # the return value, not append it
+    results = _set_rh_bonding(name, interface, distro, results)
+
     return {filename: results}
 
 
-def _write_rh_manual(name, interface):
-    filename = '/etc/sysconfig/network-scripts/ifcfg-{name}'.format(name=name)
-    results = """# Automatically generated, do not edit
-DEVICE={name}
-BOOTPROTO=none
-HWADDR={hwaddr}
-ONBOOT=yes
-NM_CONTROLLED=no
-TYPE=Ethernet
-""".format(name=name, hwaddr=interface['mac_address'])
-    if 'vlan_id' in interface:
-        results += "VLAN=yes\n"
-    if 'bond_master' in interface:
-        results += "SLAVE=yes\n"
-        results += "MASTER={0}\n".format(interface['bond_master'])
+def _write_rh_manual(name, interface, distro):
+    filename = _network_files(distro)["ifcfg"] + '-{name}'.format(name=name)
+    results = _network_config(distro)["none"].format(
+        bootproto="none", name=name, hwaddr=interface['mac_address'])
+    results += _set_rh_vlan(name, interface, distro)
+    # set_rh_bonding takes results as argument so we need to assign
+    # the return value, not append it
+    results = _set_rh_bonding(name, interface, distro, results)
+
     return {filename: results}
 
 
-def write_redhat_interfaces(interfaces, sys_interfaces):
+def write_redhat_interfaces(interfaces, sys_interfaces, distro):
     files_to_write = dict()
     # Sort the interfaces by id so that we'll have consistent output order
     for iname, interface in sorted(
@@ -171,15 +282,25 @@ def write_redhat_interfaces(interfaces, sys_interfaces):
         else:
             interface_name = sys_interfaces[interface['mac_address']]
 
+        if 'bond_links' in interface:
+            # We need to keep track of the slave interfaces because
+            # SUSE configures the slaves on the master ifcfg file
+            bond_slaves = []
+            for phy in interface['raw_macs']:
+                bond_slaves.append(sys_interfaces[phy])
+            interface['bond_slaves'] = bond_slaves
+            # Remove the 'bond_links' key
+            interface.pop('bond_links')
+
         if interface['type'] == 'ipv4':
             files_to_write.update(
-                _write_rh_interface(interface_name, interface))
+                _write_rh_interface(interface_name, interface, distro))
         if interface['type'] == 'ipv4_dhcp':
             files_to_write.update(
-                _write_rh_dhcp(interface_name, interface))
+                _write_rh_dhcp(interface_name, interface, distro))
         if interface['type'] == 'manual':
             files_to_write.update(
-                _write_rh_manual(interface_name, interface))
+                _write_rh_manual(interface_name, interface, distro))
     for mac, iname in sorted(
             sys_interfaces.items(), key=lambda x: x[1]):
         if _exists_rh_interface(iname):
@@ -193,7 +314,8 @@ def write_redhat_interfaces(interfaces, sys_interfaces):
             # We have a config drive config, move on
             log.debug("%s configured via config-drive" % mac)
             continue
-        files_to_write.update(_write_rh_dhcp(iname, {'mac_address': mac}))
+        files_to_write.update(_write_rh_dhcp(iname, {'mac_address': mac},
+                                             distro))
     return files_to_write
 
 
@@ -612,7 +734,7 @@ def get_config_drive_interfaces(net):
 
     for link in bonds.values():
         phy_macs = []
-        for phy in link.pop('bond_links'):
+        for phy in link['bond_links']:
             phy_link = phys[phy]
             phy_link['bond_master'] = link['id']
             if phy in phys:
@@ -661,12 +783,12 @@ def write_static_network_info(
             write_debian_interfaces(interfaces, sys_interfaces))
     elif args.distro in ('redhat', 'centos', 'fedora', 'suse', 'opensuse'):
         files_to_write.update(
-            write_redhat_interfaces(interfaces, sys_interfaces))
+            write_redhat_interfaces(interfaces, sys_interfaces, args.distro))
 
         # glean configures interfaces via
         # /etc/sysconfig/network-scripts, so we have to ensure that
         # the LSB init script /etc/init.d/network gets started!
-        systemd_enable('network.service', args)
+        systemd_enable(_network_files(args.distro)["systemd"], args)
     elif args.distro in 'gentoo':
         files_to_write.update(
             write_gentoo_interfaces(interfaces, sys_interfaces)

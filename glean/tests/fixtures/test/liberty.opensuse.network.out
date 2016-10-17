@@ -1,0 +1,106 @@
+### Write /etc/resolv.conf
+nameserver 72.3.128.241
+nameserver 72.3.128.240
+### Write /etc/sysconfig/network/ifcfg-eth0
+# Automatically generated, do not edit
+BOOTPROTO=static
+LLADDR=bc:76:4e:01:62:86
+IPADDR=23.253.229.154
+NETMASK=255.255.255.0
+STARTMODE=auto
+### Write /etc/sysconfig/network/ifroute-eth0
+default 23.253.229.1
+### Write /etc/sysconfig/network/ifcfg-eth1
+# Automatically generated, do not edit
+BOOTPROTO=static
+LLADDR=bc:76:4e:05:7b:06
+IPADDR=10.208.169.118
+NETMASK=255.255.224.0
+STARTMODE=auto
+### Write /etc/sysconfig/network/ifroute-eth1
+10.176.0.0 10.208.160.1 255.240.0.0
+10.208.0.0 10.208.160.1 255.240.0.0
+### Write /etc/sysconfig/network/ifcfg-eth3
+# Automatically generated, do not edit
+BOOTPROTO=dhcp
+LLADDR=bc:76:4e:12:a4:bb
+STARTMODE=auto
+### Write /etc/sysconfig/network/ifcfg-eth4.25
+# Automatically generated, do not edit
+BOOTPROTO=dhcp
+LLADDR=bc:76:4e:12:a4:bc
+STARTMODE=auto
+VLAN_ID=25
+ETHERDEVICE=eth4
+### Write /etc/sysconfig/network/ifcfg-eth4.26
+# Automatically generated, do not edit
+BOOTPROTO=dhcp
+LLADDR=bc:76:4e:12:a4:bd
+STARTMODE=auto
+VLAN_ID=26
+ETHERDEVICE=eth4
+### Write /etc/sysconfig/network/ifcfg-eth5
+# Automatically generated, do not edit
+BOOTPROTO=none
+LLADDR=bc:76:4e:05:7b:13
+STARTMODE=hotplug
+### Write /etc/sysconfig/network/ifcfg-eth6
+# Automatically generated, do not edit
+BOOTPROTO=none
+LLADDR=bc:76:4e:05:7b:14
+STARTMODE=hotplug
+### Write /etc/sysconfig/network/ifcfg-bond0
+# Automatically generated, do not edit
+BOOTPROTO=dhcp
+LLADDR=bc:76:4e:05:7b:13
+STARTMODE=auto
+BONDING_MASTER=yes
+BONDING_SLAVE_0=eth5
+BONDING_SLAVE_1=eth6
+### Write /etc/sysconfig/network/ifcfg-eth7
+# Automatically generated, do not edit
+BOOTPROTO=none
+LLADDR=bc:76:4e:05:7b:15
+STARTMODE=hotplug
+### Write /etc/sysconfig/network/ifcfg-eth8
+# Automatically generated, do not edit
+BOOTPROTO=none
+LLADDR=bc:76:4e:05:7b:16
+STARTMODE=hotplug
+### Write /etc/sysconfig/network/ifcfg-bond1
+# Automatically generated, do not edit
+BOOTPROTO=none
+LLADDR=bc:76:4e:05:7b:15
+STARTMODE=auto
+BONDING_MASTER=yes
+BONDING_SLAVE_0=eth7
+BONDING_SLAVE_1=eth8
+### Write /etc/sysconfig/network/ifcfg-bond1.27
+# Automatically generated, do not edit
+BOOTPROTO=dhcp
+LLADDR=bc:76:4e:12:a4:be
+STARTMODE=auto
+VLAN_ID=27
+ETHERDEVICE=bond1
+### Write /etc/sysconfig/network/ifcfg-eth9
+# Automatically generated, do not edit
+BOOTPROTO=none
+LLADDR=bc:76:4e:05:7b:17
+STARTMODE=hotplug
+### Write /etc/sysconfig/network/ifcfg-eth10
+# Automatically generated, do not edit
+BOOTPROTO=none
+LLADDR=bc:76:4e:05:7b:18
+STARTMODE=hotplug
+### Write /etc/sysconfig/network/ifcfg-bond2
+# Automatically generated, do not edit
+BOOTPROTO=static
+LLADDR=bc:76:4e:05:7b:17
+IPADDR=192.0.2.2
+NETMASK=255.255.255.0
+STARTMODE=auto
+BONDING_MASTER=yes
+BONDING_SLAVE_0=eth9
+BONDING_SLAVE_1=eth10
+### Write /etc/sysconfig/network/ifroute-bond2
+default 192.0.2.1

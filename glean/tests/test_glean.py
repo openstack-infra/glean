@@ -29,7 +29,8 @@ from glean import cmd
 sample_data_path = os.path.join(
     os.path.dirname(os.path.realpath(__file__)), 'fixtures')
 
-distros = ['Ubuntu', 'Debian', 'Fedora', 'RedHat', 'CentOS', 'Gentoo']
+distros = ['Ubuntu', 'Debian', 'Fedora', 'RedHat', 'CentOS', 'Gentoo',
+           'openSUSE']
 styles = ['hp', 'rax', 'rax-iad', 'liberty', 'nokey']
 ips = {'hp': '127.0.1.1',
        'rax': '23.253.229.154',
@@ -80,7 +81,7 @@ class TestGlean(base.BaseTestCase):
         # them in file_handle_mocks{} so we can assert they were
         # called later
         mock_dirs = ('/etc/network', '/etc/sysconfig/network-scripts',
-                     '/etc/conf.d', '/etc/init.d')
+                     '/etc/conf.d', '/etc/init.d', '/etc/sysconfig/network')
         mock_files = ('/etc/resolv.conf', '/etc/hostname', '/etc/hosts')
         if (path.startswith(mock_dirs) or path in mock_files):
             try:
@@ -124,11 +125,13 @@ class TestGlean(base.BaseTestCase):
             path = os.path.join(sample_data_path, sample_prefix, path[1:])
         if path in ('/etc/sysconfig/network-scripts/ifcfg-eth2',
                     '/etc/network/interfaces.d/eth2.cfg',
-                    '/etc/conf.d/net.eth2'):
+                    '/etc/conf.d/net.eth2',
+                    '/etc/sysconfig/network/ifcfg-eth2'):
             # Pretend this file exists, we need to test skipping
             # pre-existing config files
             return True
         elif (path.startswith(('/etc/sysconfig/network-scripts/',
+                               '/etc/sysconfig/network/',
                                '/etc/network/interfaces.d/',
                                '/etc/conf.d/'))):
             # Don't check the host os's network config

@@ -1,0 +1,22 @@
+### Write /etc/resolv.conf
+nameserver 69.20.0.196
+nameserver 69.20.0.164
+### Write /etc/sysconfig/network/ifcfg-eth0
+# Automatically generated, do not edit
+BOOTPROTO=static
+LLADDR=bc:76:4e:20:d7:2f
+IPADDR=146.20.110.113
+NETMASK=255.255.255.0
+STARTMODE=auto
+### Write /etc/sysconfig/network/ifroute-eth0
+default 146.20.110.1
+### Write /etc/sysconfig/network/ifcfg-eth1
+# Automatically generated, do not edit
+BOOTPROTO=static
+LLADDR=bc:76:4e:20:d7:33
+IPADDR=10.210.32.174
+NETMASK=255.255.224.0
+STARTMODE=auto
+### Write /etc/sysconfig/network/ifroute-eth1
+10.176.0.0 10.210.32.1 255.240.0.0
+10.208.0.0 10.210.32.1 255.240.0.0
