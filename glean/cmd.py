@@ -859,13 +859,7 @@ def interface_live(iface, sys_root, args):
 
     subprocess.check_call(['ip', 'link', 'set', 'dev', iface, 'up'])
 
-    # Poll the interface since it may not come up instantly
-    for x in range(0, 50):
-        if is_interface_live(iface, sys_root):
-            return True
-        time.sleep(.1)
-    log.debug("Interface %s appears not to have an active link." % iface)
-    return False
+    return True
 
 
 def is_interface_vlan(iface, distro):
@@ -915,6 +909,8 @@ def get_sys_interfaces(interface, args):
     else:
         interfaces = [f for f in os.listdir(sys_root)
                       if not f.startswith(ignored_interfaces)]
+    # build interface dict. so we can enumerate through later
+    if_dict = {}
     for iface in interfaces:
         # if interface is for an already configured vlan, skip it
         if is_interface_vlan(iface, args.distro):
@@ -934,10 +930,39 @@ def get_sys_interfaces(interface, args):
         # glean.
         if mac_addr_type != PERMANENT_ADDR_TYPE:
             continue
-        mac = open('%s/%s/address' % (sys_root, iface), 'r').read().strip()
+        # check if interface is up if not try and bring it up
         if interface_live(iface, sys_root, args):
-            sys_interfaces[mac] = iface
-            log.debug("Adding system interface %s (%s)" % (iface, mac))
+            mac = open('%s/%s/address' % (sys_root, iface), 'r').read().strip()
+            if_dict[iface] = mac
+
+    # wait up to 9 seconds all interfaces to reach up
+    log.debug("Waiting for interfaces to become active.")
+    if_up_list = []
+    for x in range(0, 90):
+        for iface in if_dict:
+            mac = if_dict[iface]
+            if iface in if_up_list:
+                continue
+            if is_interface_live(iface, sys_root):
+                # Add system interface
+                sys_interfaces[mac] = iface
+                log.debug("Added system interface %s (%s)" % (iface, mac))
+                if_up_list.append(iface)
+
+        if sorted(if_up_list) == sorted(if_dict.keys()):
+            # all interfaces are up no need to continue looping
+            break
+        time.sleep(.1)
+
+    if sorted(if_up_list) != sorted(if_dict.keys()):
+        # not all interfaces became active with in the time limit
+        for iface in if_dict:
+            if iface in if_up_list:
+                continue
+            msg = "Skipping system interface %s (%s)" % (iface,
+                                                         if_dict[iface])
+            log.warn(msg)
+
     return sys_interfaces
 
 
