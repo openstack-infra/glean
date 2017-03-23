@@ -602,6 +602,8 @@ def write_debian_interfaces(interfaces, sys_interfaces):
             link_type = "inet6"
         elif interface['type'] == 'ipv4':
             link_type = "inet"
+        else:
+            link_type = None
 
         # We do not know this type of entry
         if not link_type:
