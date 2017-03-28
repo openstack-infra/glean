@@ -73,17 +73,12 @@ def _is_suse(distro):
 def _network_files(distro):
     network_files = {}
     if _is_suse(distro):
-        # network.service is an alias to wicked.service on SUSE
-        # and openSUSE images so use that instead of network.service
-        # since systemd refuses to treat aliases as normal services
         network_files = {
-            "systemd": "wicked.service",
             "ifcfg": "/etc/sysconfig/network/ifcfg",
             "route": "/etc/sysconfig/network/ifroute",
         }
     else:
         network_files = {
-            "systemd": "network.service",
             "ifcfg": "/etc/sysconfig/network-scripts/ifcfg",
             "route": "/etc/sysconfig/network-scripts/route",
         }
@@ -482,18 +477,6 @@ def write_gentoo_interfaces(interfaces, sys_interfaces):
     return files_to_write
 
 
-def systemd_enable(service, args):
-    log.debug("Enabling %s via systemctl" % service)
-
-    if args.noop:
-        return
-
-    rc = os.system('systemctl enable %s' % service)
-    if rc != 0:
-        log.error("Error enabling %s" % service)
-        sys.exit(rc)
-
-
 def _exists_debian_interface(name):
     file_to_check = '/etc/network/interfaces.d/{name}.cfg'.format(name=name)
     return os.path.exists(file_to_check)
@@ -786,11 +769,6 @@ def write_static_network_info(
     elif args.distro in ('redhat', 'centos', 'fedora', 'suse', 'opensuse'):
         files_to_write.update(
             write_redhat_interfaces(interfaces, sys_interfaces, args.distro))
-
-        # glean configures interfaces via
-        # /etc/sysconfig/network-scripts, so we have to ensure that
-        # the LSB init script /etc/init.d/network gets started!
-        systemd_enable(_network_files(args.distro)["systemd"], args)
     elif args.distro in 'gentoo':
         files_to_write.update(
             write_gentoo_interfaces(interfaces, sys_interfaces)

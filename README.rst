@@ -57,6 +57,14 @@ configuration drive is probed to see if network configuration for the
 interface is available.  If so, it will be added, otherwise the
 interface will configured for DHCP.
 
+.. note ::
+
+   glean uses the network init scripts service ``network.service`` on
+   RedHat platforms (or the equivalent on other platforms).  You should
+   ensure this service is enabled and other tools such as
+   NetworkManager are disabled for correct operation.
+
+
 How do I use glean?
 -------------------
 
