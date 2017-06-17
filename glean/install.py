@@ -96,7 +96,16 @@ def main():
         log.info('installing openrc services')
         install('glean.openrc', '/etc/init.d/glean')
         subprocess.call(['rc-update', 'add', 'glean', 'boot'])
-    if os.path.exists('/usr/lib/systemd'):
+    # Needs to check for the presence of systemd and systemctl
+    # as apparently some packages may stage systemd init files
+    # when systemd is not present.
+    # We also cannot check the path for the init pid as the pid
+    # may be wrong as install is generally executed in a chroot
+    # with diskimage-builder.
+
+    if (os.path.exists('/usr/lib/systemd/system') and
+            (os.path.exists('/usr/bin/systemctl') or
+             os.path.exists('/bin/systemctl'))):
         p = _find_gleansh_path()
 
         log.info("Installing systemd services")
