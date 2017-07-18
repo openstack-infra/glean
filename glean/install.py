@@ -123,6 +123,12 @@ def main():
     elif os.path.exists('/etc/init'):
         log.info("Installing upstart services")
         install('glean.conf', '/etc/init/glean.conf')
+    elif os.path.exists('/etc/gentoo-release'):
+        # If installing on Gentoo and if systemd or upstart is not
+        # detected, then prevent the installation of sysv init scripts
+        # on Gentoo, which would overwrite the OpenRC init scripts as
+        # the sysv init script uses the same path.
+        pass
     else:
         log.info("Installing sysv services")
         install('glean.init', '/etc/init.d/glean')
