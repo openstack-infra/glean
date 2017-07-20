@@ -1,5 +1,6 @@
 [Unit]
 Description=Glean for interface %I
+DefaultDependencies=no
 Before=network-pre.target
 Wants=network-pre.target
 
