@@ -40,14 +40,21 @@ function config_exists() {
     return 1
 }
 
+# NOTE(mnaser): Depending on the cloud, it may have `vfat` config drive which
+#               comes with a capitalized label rather than all lowercase.
+if blkid -t LABEL="config-2" ; then
+    CONFIG_DRIVE_LABEL="config-2"
+elif blkid -t LABEL="CONFIG-2" ; then
+    CONFIG_DRIVE_LABEL="CONFIG-2"
+fi
 
 # Test to see if config-drive exists. If not, skip and assume DHCP networking
 # will work because sanity
-if blkid -t LABEL="config-2" ; then
+if [ -n "$CONFIG_DRIVE_LABEL" ]; then
     # Mount config drive
     mkdir -p /mnt/config
-    BLOCKDEV="$(blkid -L config-2)"
-    TYPE="$(blkid -t LABEL=config-2 -s TYPE -o value)"
+    BLOCKDEV="$(blkid -L ${CONFIG_DRIVE_LABEL})"
+    TYPE="$(blkid -t LABEL=${CONFIG_DRIVE_LABEL} -s TYPE -o value)"
     if [[ "${TYPE}" == 'vfat' ]]; then
         mount -o umask=0077 "${BLOCKDEV}" /mnt/config || true
     else
