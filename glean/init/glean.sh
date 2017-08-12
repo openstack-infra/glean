@@ -19,26 +19,6 @@ set -o pipefail
 
 PATH=/usr/local/bin:/bin:/sbin:/usr/bin:/usr/sbin
 
-function config_exists() {
-    local interface=$1
-    if [ "$CONF_TYPE" == "netscripts" ]; then
-        if [ -f "/etc/sysconfig/network-scripts/ifcfg-$interface" ]; then
-            return 0
-        fi
-    # Gentoo: return the value of grep -q INTERFACE in the config file, if it exists
-    elif [[ -a /etc/gentoo-release ]]; then
-        if [[ -a /etc/conf.d/net ]]; then
-            # the '=' is needed so eth0 doesn't match on eth0.1
-            grep -q "${interface}=" /etc/conf.d/net* || return 1
-        else
-            return 1
-        fi
-    else
-        ifquery "${interface}" >/dev/null 2>&1 && return 0 || return 1
-    fi
-    return 1
-}
-
 # NOTE(mnaser): Depending on the cloud, it may have `vfat` config drive which
 #               comes with a capitalized label rather than all lowercase.
 if blkid -t LABEL="config-2" ; then
