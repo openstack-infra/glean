@@ -995,7 +995,9 @@ def write_network_info_from_config_drive(args):
 
     network_info = get_network_info(args)
 
-    dns = write_dns_info(get_dns_from_config_drive(network_info))
+    dns = {}
+    if not args.skip_dns:
+        dns = write_dns_info(get_dns_from_config_drive(network_info))
     interfaces = get_config_drive_interfaces(network_info)
     sys_interfaces = get_sys_interfaces(args.interface, args)
 
@@ -1139,6 +1141,9 @@ def main():
     parser.add_argument(
         '--skip-network', dest='skip', action='store_true',
         help="Do not write network info")
+    parser.add_argument(
+        '--skip-dns', dest='skip_dns', action='store_true',
+        help='Do not write dns info')
     parser.add_argument(
         '--debug', dest='debug', action='store_true',
         help="Enable debugging output")

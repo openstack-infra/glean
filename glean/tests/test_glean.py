@@ -158,13 +158,15 @@ class TestGlean(base.BaseTestCase):
                                 mock_os_unlink,
                                 mock_check_output,
                                 mock_call,
-                                mock_platform_dist):
+                                mock_platform_dist,
+                                skip_dns=False):
         """Main test function
 
         :param distro: distro to return from "platform.dist"
         :param provider: we will look in fixtures/provider for mocked
                          out files
         :param interface: --interface argument; None for no argument
+        :param skip_dns: --skip-dns argument; False for no argument
         """
 
         mock_platform_dist.return_value = (distro, '', '')
@@ -184,6 +186,8 @@ class TestGlean(base.BaseTestCase):
 
         if interface:
             sys.argv.append('--interface=%s' % interface)
+        if skip_dns:
+            sys.argv.append('--skip-dns')
 
         cmd.main()
 
@@ -210,6 +214,10 @@ class TestGlean(base.BaseTestCase):
             if interface and interface not in dest:
                 continue
             self.assertNotIn("eth2", dest)
+            # Skip check
+            if skip_dns and '/etc/resolv.conf' in dest:
+                self.assertNotIn(dest, self.file_handle_mocks)
+                continue
             self.assertIn(dest, self.file_handle_mocks)
             write_handle = self.file_handle_mocks[dest].write
             write_handle.assert_called_once_with(content)
@@ -253,3 +261,8 @@ class TestGlean(base.BaseTestCase):
     def test_glean_systemd(self):
         with mock.patch('glean.systemlock.Lock'):
             self._assert_distro_provider(self.distro, self.style, 'eth0')
+
+    def test_glean_skip_dns(self):
+        with mock.patch('glean.systemlock.Lock'):
+            self._assert_distro_provider(
+                self.distro, self.style, None, skip_dns=True)
