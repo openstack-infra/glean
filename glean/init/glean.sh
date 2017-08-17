@@ -42,6 +42,8 @@ function config_exists() {
 
 # NOTE(mnaser): Depending on the cloud, it may have `vfat` config drive which
 #               comes with a capitalized label rather than all lowercase.
+CONFIG_DRIVE_LABEL=""
+
 if blkid -t LABEL="config-2" ; then
     CONFIG_DRIVE_LABEL="config-2"
 elif blkid -t LABEL="CONFIG-2" ; then
