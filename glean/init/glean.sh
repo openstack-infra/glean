@@ -18,7 +18,6 @@ set -eu
 set -o pipefail
 
 PATH=/usr/local/bin:/bin:/sbin:/usr/bin:/usr/sbin
-INTERFACE=${1:-} #optional, if not specified configure all available interfaces
 
 function config_exists() {
     local interface=$1
@@ -65,8 +64,4 @@ if [ -n "$CONFIG_DRIVE_LABEL" ]; then
     glean --ssh --skip-network --hostname
 fi
 
-if [ -n "$INTERFACE" ]; then
-    glean --interface "${INTERFACE}"
-else
-    glean
-fi
+glean $@
