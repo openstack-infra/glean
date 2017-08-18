@@ -8,7 +8,8 @@ ConditionPathExists=!/etc/sysconfig/network-scripts/ifcfg-%I
 [Service]
 Type=oneshot
 User=root
-ExecStartPre=%%GLEANSH_PATH%%/glean.sh --interface %I
+Environment="ARGS=--interface %I"
+ExecStartPre=%%GLEANSH_PATH%%/glean.sh ${ARGS}
 ExecStart=/sbin/ifup %I
 RemainAfterExit=true
 
