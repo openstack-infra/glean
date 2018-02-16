@@ -138,10 +138,7 @@ class TestGlean(base.BaseTestCase):
             return False
         return real_path_exists(path)
 
-    @mock.patch('platform.dist', new_callable=mock.Mock)
     @mock.patch('subprocess.call', return_value=0, new_callable=mock.Mock)
-    @mock.patch('subprocess.check_output', return_value=0,
-                new_callable=mock.Mock)
     @mock.patch('os.unlink', return_value=0, new_callable=mock.Mock)
     @mock.patch('os.symlink', return_value=0, new_callable=mock.Mock)
     @mock.patch('os.path.exists', new_callable=mock.Mock)
@@ -156,20 +153,16 @@ class TestGlean(base.BaseTestCase):
                                 mock_os_path_exists,
                                 mock_os_symlink,
                                 mock_os_unlink,
-                                mock_check_output,
                                 mock_call,
-                                mock_platform_dist,
                                 skip_dns=False):
         """Main test function
 
-        :param distro: distro to return from "platform.dist"
+        :param distro: distro to return from "distro.linux_distribution()"
         :param provider: we will look in fixtures/provider for mocked
                          out files
         :param interface: --interface argument; None for no argument
         :param skip_dns: --skip-dns argument; False for no argument
         """
-
-        mock_platform_dist.return_value = (distro, '', '')
 
         # These functions are watching the path and faking results
         # based on various things
@@ -183,6 +176,8 @@ class TestGlean(base.BaseTestCase):
             self.os_listdir_side_effect, provider)
         mock_open.side_effect = functools.partial(
             self.open_side_effect, provider)
+
+        sys.argv.append('--distro=%s' % distro.lower())
 
         if interface:
             sys.argv.append('--interface=%s' % interface)

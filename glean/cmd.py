@@ -22,7 +22,6 @@ import errno
 import json
 import logging
 import os
-import platform
 import re
 import subprocess
 import sys
@@ -30,6 +29,7 @@ import time
 
 from glean import systemlock
 from glean import utils
+from glean._vendor import distro
 
 log = logging.getLogger("glean")
 
@@ -1123,10 +1123,11 @@ def main():
     parser = argparse.ArgumentParser(description="Static network config")
     parser.add_argument(
         '-n', '--noop', action='store_true', help='Do not write files')
+    _distro = distro.linux_distribution(
+        full_distribution_name=False)[0].lower()
     parser.add_argument(
-        '--distro', dest='distro',
-        default=platform.dist()[0].lower(),
-        help='Override distro (detected "%s")' % platform.dist()[0].lower())
+        '--distro', dest='distro', default=_distro,
+        help='Override distro (detected "%s")' % _distro)
     parser.add_argument(
         '--root', dest='root', default='/',
         help='Mounted root for config drive info, defaults to /')
