@@ -1,0 +1,30 @@
+### Write /etc/systemd/network/eth0.network
+# Automatically generated, do not edit
+[Match]
+MACAddress=bc:76:4e:01:62:86
+Name=eth0
+
+[Network]
+DHCP=ipv4
+IPv6AcceptRA=no
+
+### Write /etc/systemd/network/eth1.network
+# Automatically generated, do not edit
+[Match]
+MACAddress=bc:76:4e:05:7b:06
+Name=eth1
+
+[Network]
+DHCP=ipv4
+IPv6AcceptRA=no
+
+### Write /etc/systemd/network/eth3.network
+# Automatically generated, do not edit
+[Match]
+MACAddress=bc:76:4e:12:a4:bb
+Name=eth3
+
+[Network]
+DHCP=ipv4
+IPv6AcceptRA=no
+

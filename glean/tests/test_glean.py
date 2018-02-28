@@ -30,7 +30,7 @@ sample_data_path = os.path.join(
     os.path.dirname(os.path.realpath(__file__)), 'fixtures')
 
 distros = ['Ubuntu', 'Debian', 'Fedora', 'RedHat', 'CentOS', 'Gentoo',
-           'openSUSE']
+           'openSUSE', 'networkd']
 styles = ['hp', 'rax', 'rax-iad', 'liberty', 'nokey']
 ips = {'hp': '127.0.1.1',
        'rax': '23.253.229.154',
@@ -81,8 +81,10 @@ class TestGlean(base.BaseTestCase):
         # them in file_handle_mocks{} so we can assert they were
         # called later
         mock_dirs = ('/etc/network', '/etc/sysconfig/network-scripts',
-                     '/etc/conf.d', '/etc/init.d', '/etc/sysconfig/network')
-        mock_files = ('/etc/resolv.conf', '/etc/hostname', '/etc/hosts')
+                     '/etc/conf.d', '/etc/init.d', '/etc/sysconfig/network',
+                     '/etc/systemd/network')
+        mock_files = ('/etc/resolv.conf', '/etc/hostname', '/etc/hosts',
+                      '/bin/systemctl')
         if (path.startswith(mock_dirs) or path in mock_files):
             try:
                 mock_handle = self.file_handle_mocks[path]
@@ -126,14 +128,16 @@ class TestGlean(base.BaseTestCase):
         if path in ('/etc/sysconfig/network-scripts/ifcfg-eth2',
                     '/etc/network/interfaces.d/eth2.cfg',
                     '/etc/conf.d/net.eth2',
-                    '/etc/sysconfig/network/ifcfg-eth2'):
+                    '/etc/sysconfig/network/ifcfg-eth2',
+                    '/etc/systemd/network/eth2.network'):
             # Pretend this file exists, we need to test skipping
             # pre-existing config files
             return True
         elif (path.startswith(('/etc/sysconfig/network-scripts/',
                                '/etc/sysconfig/network/',
                                '/etc/network/interfaces.d/',
-                               '/etc/conf.d/'))):
+                               '/etc/conf.d/',
+                               '/etc/systemd/network/'))):
             # Don't check the host os's network config
             return False
         return real_path_exists(path)

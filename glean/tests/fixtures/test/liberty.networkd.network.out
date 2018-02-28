@@ -1,0 +1,209 @@
+### Write /etc/resolv.conf
+nameserver 72.3.128.241
+nameserver 72.3.128.240
+### Write /etc/systemd/network/eth0.network
+# Automatically generated, do not edit
+[Match]
+MACAddress=bc:76:4e:01:62:86
+Name=eth0
+
+[Network]
+IPv6AcceptRA=no
+
+[Address]
+Address=23.253.229.154/24
+
+[Route]
+Destination=0.0.0.0/0
+Gateway=23.253.229.1
+
+### Write /etc/systemd/network/eth1.network
+# Automatically generated, do not edit
+[Match]
+MACAddress=bc:76:4e:05:7b:06
+Name=eth1
+
+[Network]
+IPv6AcceptRA=no
+
+[Address]
+Address=10.208.169.118/19
+
+[Route]
+Destination=10.176.0.0/12
+Gateway=10.208.160.1
+
+[Route]
+Destination=10.208.0.0/12
+Gateway=10.208.160.1
+
+### Write /etc/systemd/network/eth3.network
+# Automatically generated, do not edit
+[Match]
+MACAddress=bc:76:4e:12:a4:bb
+Name=eth3
+
+[Network]
+DHCP=ipv4
+IPv6AcceptRA=no
+
+### Write /etc/systemd/network/eth4.network
+# Automatically generated, do not edit
+[Match]
+MACAddress=bc:76:4e:12:a4:bc
+Name=eth4
+
+[Network]
+IPv6AcceptRA=no
+VLAN=eth4-vlan25
+VLAN=eth4-vlan26
+
+### Write /etc/systemd/network/eth4-vlan25.network
+# Automatically generated, do not edit
+[Match]
+MACAddress=bc:76:4e:12:a4:bc
+Name=eth4-vlan25
+
+[Network]
+DHCP=ipv4
+IPv6AcceptRA=no
+VLAN=eth4-vlan25
+
+### Write /etc/systemd/network/eth4-vlan25.netdev
+# Automatically generated, do not edit
+[NetDev]
+Kind=vlan
+MACAddress=bc:76:4e:12:a4:bc
+Name=eth4-vlan25
+
+[VLAN]
+Id=25
+
+### Write /etc/systemd/network/eth4-vlan26.network
+# Automatically generated, do not edit
+[Match]
+MACAddress=bc:76:4e:12:a4:bd
+Name=eth4-vlan26
+
+[Network]
+DHCP=ipv4
+IPv6AcceptRA=no
+VLAN=eth4-vlan26
+
+### Write /etc/systemd/network/eth4-vlan26.netdev
+# Automatically generated, do not edit
+[NetDev]
+Kind=vlan
+MACAddress=bc:76:4e:12:a4:bd
+Name=eth4-vlan26
+
+[VLAN]
+Id=26
+
+### Write /etc/systemd/network/eth5.network
+# Automatically generated, do not edit
+[Match]
+MACAddress=bc:76:4e:05:7b:13
+Name=eth5
+
+[Network]
+Bond=bond0
+IPv6AcceptRA=no
+
+### Write /etc/systemd/network/eth6.network
+# Automatically generated, do not edit
+[Match]
+MACAddress=bc:76:4e:05:7b:14
+Name=eth6
+
+[Network]
+Bond=bond0
+IPv6AcceptRA=no
+
+### Write /etc/systemd/network/bond0.network
+# Automatically generated, do not edit
+[Match]
+MACAddress=bc:76:4e:05:7b:13
+Name=bond0
+
+[Network]
+DHCP=ipv4
+IPv6AcceptRA=no
+
+### Write /etc/systemd/network/bond0.netdev
+# Automatically generated, do not edit
+[NetDev]
+Kind=bond
+MACAddress=bc:76:4e:05:7b:13
+Name=bond0
+
+[Bond]
+LACPTransmitRate=fast
+MIIMonitorSec=100
+Mode=802.3ad
+TransmitHashPolicy=layer3+4
+
+### Write /etc/systemd/network/eth7.network
+# Automatically generated, do not edit
+[Match]
+MACAddress=bc:76:4e:05:7b:15
+Name=eth7
+
+[Network]
+Bond=bond1
+IPv6AcceptRA=no
+
+### Write /etc/systemd/network/eth8.network
+# Automatically generated, do not edit
+[Match]
+MACAddress=bc:76:4e:05:7b:16
+Name=eth8
+
+[Network]
+Bond=bond1
+IPv6AcceptRA=no
+
+### Write /etc/systemd/network/bond1.network
+# Automatically generated, do not edit
+[Match]
+MACAddress=bc:76:4e:05:7b:15
+Name=bond1
+
+[Network]
+IPv6AcceptRA=no
+VLAN=bond1-vlan27
+
+### Write /etc/systemd/network/bond1.netdev
+# Automatically generated, do not edit
+[NetDev]
+Kind=bond
+MACAddress=bc:76:4e:05:7b:15
+Name=bond1
+
+[Bond]
+LACPTransmitRate=fast
+MIIMonitorSec=100
+Mode=802.3ad
+TransmitHashPolicy=layer3+4
+
+### Write /etc/systemd/network/bond1-vlan27.network
+# Automatically generated, do not edit
+[Match]
+MACAddress=bc:76:4e:12:a4:be
+Name=bond1-vlan27
+
+[Network]
+DHCP=ipv4
+IPv6AcceptRA=no
+VLAN=bond1-vlan27
+
+### Write /etc/systemd/network/bond1-vlan27.netdev
+# Automatically generated, do not edit
+[NetDev]
+Kind=vlan
+MACAddress=bc:76:4e:12:a4:be
+Name=bond1-vlan27
+
+[VLAN]
+Id=27
+

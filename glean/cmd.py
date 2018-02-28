@@ -314,6 +314,289 @@ def write_redhat_interfaces(interfaces, sys_interfaces, distro):
     return files_to_write
 
 
+def _write_networkd_interface(name, interfaces, files_struct=dict()):
+    vlans = []
+    for interface in interfaces:
+        iname = name
+        # if vlan set interface name to vlan format
+        if 'vlan_id' in interface:
+            iname = name + '-vlan' + str(interface['vlan_id'])
+            vlans.append(iname)
+        network_file = '/etc/systemd/network/{name}.network'.format(name=iname)
+        if network_file not in files_struct:
+            files_struct[network_file] = dict()
+        if '[Match]' not in files_struct[network_file]:
+            files_struct[network_file]['[Match]'] = list()
+        files_struct[network_file]['[Match]'].append(
+            'MACAddress={mac_address}'.format(
+                mac_address=interface['mac_address']
+            )
+        )
+        files_struct[network_file]['[Match]'].append(
+            'Name={name}'.format(name=iname)
+        )
+        # define network if needed (basically always)
+        if ((interface['type'] in ['ipv4_dhcp', 'ipv6_slaac',
+            'ipv6_dhcpv6_stateful', 'manual', 'ipv4', 'ipv6']) or
+                ('vlan_id' in interface) or
+                ('bond_mode' in interface)):
+            if '[Network]' not in files_struct[network_file]:
+                files_struct[network_file]['[Network]'] = list()
+        # dhcp network, set to yes if both dhcp6 and dhcp4 are set
+        if interface['type'] == 'ipv4_dhcp':
+            if 'DHCP=ipv6' in files_struct[network_file]['[Network]']:
+                files_struct[network_file]['[Network]'].append('DHCP=yes')
+            else:
+                files_struct[network_file]['[Network]'].append('DHCP=ipv4')
+        if interface['type'] == 'ipv6_dhcpv6_stateful':
+            if 'DHCP=ipv4' in files_struct[network_file]['[Network]']:
+                files_struct[network_file]['[Network]'].append('DHCP=yes')
+            else:
+                files_struct[network_file]['[Network]'].append('DHCP=ipv6')
+        # slaac can start dhcp6 if the associated RA option is sent to server
+        if interface['type'] == 'ipv6_slaac':
+            # we are accepting slaac now, remove the disabling of slaac
+            if 'IPv6AcceptRA=no' in files_struct[network_file]['[Network]']:
+                files_struct[network_file]['[Network]'].remove(
+                    'IPv6AcceptRA=no'
+                )
+            files_struct[network_file]['[Network]'].append('IPv6AcceptRA=yes')
+        else:
+            # only disbale slaac if slac is not already enabled
+            if 'IPv6AcceptRA=yes' not in \
+                    files_struct[network_file]['[Network]']:
+                files_struct[network_file]['[Network]'].append(
+                    'IPv6AcceptRA=no'
+                )
+        # vlan network
+
+        # static network
+        if interface['type'] in ['ipv4', 'ipv6']:
+            if 'addresses' not in files_struct[network_file]:
+                files_struct[network_file]['addresses'] = list()
+        if interface['type'] == 'ipv4':
+            files_struct[network_file]['addresses'].append(
+                'Address={address}/{cidr}'.format(
+                    address=interface['ip_address'],
+                    cidr=utils.ipv4_netmask_length(interface['netmask'])
+                )
+            )
+        if interface['type'] == 'ipv6':
+            files_struct[network_file]['addresses'].append(
+                'Address={address}/{cidr}'.format(
+                    address=interface['ip_address'],
+                    cidr=utils.ipv6_netmask_length(interface['netmask'])
+                )
+            )
+        # routes
+        if 'routes' in interface:
+            if 'routes' not in files_struct[network_file]:
+                files_struct[network_file]['routes'] = list()
+            for route in interface['routes']:
+                route_destination = None
+                route_gateway = None
+                if 'network' in route:
+                    if 'v6' in interface['type']:
+                        cidr = utils.ipv6_netmask_length(route['netmask'])
+                    else:
+                        cidr = utils.ipv4_netmask_length(route['netmask'])
+                    route_destination = 'Destination={network}/{cidr}'.format(
+                        network=route['network'], cidr=cidr
+                    )
+                if 'gateway' in route:
+                    route_gateway = 'Gateway={gateway}'.format(
+                        gateway=route['gateway']
+                    )
+                # add route as a dictionary to the routes list
+                files_struct[network_file]['routes'].append({
+                    'route': route_destination,
+                    'gw': route_gateway
+                })
+
+        # create netdev files
+        if 'bond_mode' or 'vlan_id' in interface:
+            netdev_file = \
+                '/etc/systemd/network/{name}.netdev'.format(name=iname)
+            if netdev_file not in files_struct:
+                files_struct[netdev_file] = dict()
+            if '[NetDev]' not in files_struct[netdev_file]:
+                files_struct[netdev_file]['[NetDev]'] = list()
+            files_struct[netdev_file]['[NetDev]'].append(
+                'Name={name}'.format(name=iname)
+            )
+            if 'mac_address' in interface:
+                files_struct[netdev_file]['[NetDev]'].append(
+                    'MACAddress={mac_address}'.format(
+                        mac_address=interface['mac_address']
+                    )
+                )
+            if 'vlan_id' in interface:
+                files_struct[netdev_file]['[NetDev]'].append('Kind=vlan')
+                files_struct[netdev_file]['[VLAN]'] = list()
+                files_struct[netdev_file]['[VLAN]'].append(
+                    'Id={id}'.format(id=interface['vlan_id'])
+                )
+            if 'bond_mode' in interface:
+                files_struct[netdev_file]['[NetDev]'].append('Kind=bond')
+                files_struct[netdev_file]['[Bond]'] = list()
+                files_struct[netdev_file]['[Bond]'].append(
+                    'Mode={bond_mode}'.format(bond_mode=interface['bond_mode'])
+                )
+                files_struct[netdev_file]['[Bond]'].append(
+                    'LACPTransmitRate=fast'
+                )
+                if 'slaves' in interface:
+                    for slave in interface['slaves']:
+                        slave_net_file = \
+                            '/etc/systemd/network/{name}.network'.format(
+                                name=slave
+                            )
+                        if slave_net_file not in files_struct:
+                            files_struct[slave_net_file] = dict()
+                        if '[Network]' not in files_struct[slave_net_file]:
+                            files_struct[slave_net_file]['[Network]'] = list()
+                        files_struct[slave_net_file]['[Network]'].append(
+                            'Bond={name}'.format(name=iname)
+                        )
+                if 'bond_xmit_hash_policy' in interface:
+                    files_struct[netdev_file]['[Bond]'].append(
+                        'TransmitHashPolicy={bond_xmit_hash_policy}'.format(
+                            bond_xmit_hash_policy=interface[
+                                'bond_xmit_hash_policy'
+                            ]
+                        )
+                    )
+                if 'bond_miimon' in interface:
+                    files_struct[netdev_file]['[Bond]'].append(
+                        'MIIMonitorSec={milliseconds}'.format(
+                            milliseconds=interface['bond_miimon']
+                        )
+                    )
+
+    # vlan mapping sucks (forward and reverse)
+    if vlans:
+        netdev = vlans[0].split('-')[0]
+        vlan_master_file = \
+            '/etc/systemd/network/{name}.network'.format(name=netdev)
+        if vlan_master_file not in files_struct:
+            files_struct[vlan_master_file] = dict()
+        if '[Network]' not in files_struct[vlan_master_file]:
+            files_struct[vlan_master_file]['[Network]'] = list()
+        for vlan in vlans:
+            files_struct[vlan_master_file]['[Network]'].append('VLAN=' + vlan)
+            vlan_file = '/etc/systemd/network/{name}.network'.format(name=vlan)
+            if vlan_file not in files_struct:
+                files_struct[vlan_file] = dict()
+            if '[Network]' not in files_struct[vlan_file]:
+                files_struct[vlan_file]['[Network]'] = list()
+            files_struct[vlan_file]['[Network]'].append('VLAN=' + vlan)
+
+    return files_struct
+
+
+def write_networkd_interfaces(interfaces, sys_interfaces):
+    files_to_write = dict()
+    gen_intfs = {}
+    files_struct = dict()
+    # Sort the interfaces by id so that we'll have consistent output order
+    for iname, interface in sorted(
+            interfaces.items(), key=lambda x: x[1]['id']):
+        # sys_interfaces is pruned by --interface; if one of the
+        # raw_macs (or, *the* MAC for single interfaces) does not
+        # match as one of the interfaces we want configured, skip
+        raw_macs = interface.get('raw_macs', [interface['mac_address']])
+        if not set(sys_interfaces).intersection(set(raw_macs)):
+            continue
+
+        if 'bond_mode' in interface:
+            interface['slaves'] = [
+                sys_interfaces[mac] for mac in interface['raw_macs']]
+
+        if 'raw_macs' in interface:
+            key = tuple(interface['raw_macs'])
+            if key not in gen_intfs:
+                gen_intfs[key] = []
+            gen_intfs[key].append(interface)
+        else:
+            key = (interface['mac_address'],)
+            if key not in gen_intfs:
+                gen_intfs[key] = []
+            gen_intfs[key].append(interface)
+
+    for raw_macs, interfs in gen_intfs.items():
+        if len(raw_macs) == 1:
+            interface_name = sys_interfaces[raw_macs[0]]
+        else:
+            # It is possible our interface does not have a link, so
+            # fall back to interface id.
+            interface_name = next(
+                intf.get('link', intf['id']) for intf in interfs
+                if 'bond_mode' in intf)
+        files_struct = _write_networkd_interface(
+            interface_name, interfs, files_struct)
+
+    for mac, iname in sorted(
+            sys_interfaces.items(), key=lambda x: x[1]):
+        if _exists_gentoo_interface(iname):
+            # This interface already has a config file, move on
+            log.debug("%s already has config file, skipping" % iname)
+            continue
+        if (mac,) in gen_intfs:
+            # We have a config drive config, move on
+            log.debug("%s configured via config-drive" % mac)
+            continue
+        interface = {'type': 'ipv4_dhcp', 'mac_address': mac}
+        files_struct = _write_networkd_interface(
+            iname, [interface], files_struct)
+
+    for networkd_file in files_struct:
+        file_contents = '# Automatically generated, do not edit\n'
+        if '[Match]' in files_struct[networkd_file]:
+            file_contents += '[Match]\n'
+            for line in sorted(set(files_struct[networkd_file]['[Match]'])):
+                file_contents += line
+                file_contents += '\n'
+            file_contents += '\n'
+        if '[Network]' in files_struct[networkd_file]:
+            file_contents += '[Network]\n'
+            for line in sorted(set(files_struct[networkd_file]['[Network]'])):
+                file_contents += line
+                file_contents += '\n'
+            file_contents += '\n'
+        if 'addresses' in files_struct[networkd_file]:
+            for address in files_struct[networkd_file]['addresses']:
+                file_contents += '[Address]\n'
+                file_contents += address + '\n\n'
+        if 'routes' in files_struct[networkd_file]:
+            for route in files_struct[networkd_file]['routes']:
+                file_contents += '[Route]\n'
+                if route['route'] is not None:
+                    file_contents += route['route'] + '\n'
+                if route['gw'] is not None:
+                    file_contents += route['gw'] + '\n'
+                file_contents += '\n'
+        if '[NetDev]' in files_struct[networkd_file]:
+            file_contents += '[NetDev]\n'
+            for line in sorted(set(files_struct[networkd_file]['[NetDev]'])):
+                file_contents += line
+                file_contents += '\n'
+            file_contents += '\n'
+        if '[VLAN]' in files_struct[networkd_file]:
+            file_contents += '[VLAN]\n'
+            for line in sorted(set(files_struct[networkd_file]['[VLAN]'])):
+                file_contents += line
+                file_contents += '\n'
+            file_contents += '\n'
+        if '[Bond]' in files_struct[networkd_file]:
+            file_contents += '[Bond]\n'
+            for line in sorted(set(files_struct[networkd_file]['[Bond]'])):
+                file_contents += line
+                file_contents += '\n'
+            file_contents += '\n'
+        files_to_write['{path}'.format(path=networkd_file)] = file_contents
+    return files_to_write
+
+
 def _exists_gentoo_interface(name):
     file_to_check = '/etc/conf.d/net.{name}'.format(name=name)
     return os.path.exists(file_to_check)
@@ -772,6 +1055,10 @@ def write_static_network_info(
     elif args.distro in 'gentoo':
         files_to_write.update(
             write_gentoo_interfaces(interfaces, sys_interfaces)
+        )
+    elif args.distro in 'networkd':
+        files_to_write.update(
+            write_networkd_interfaces(interfaces, sys_interfaces)
         )
     else:
         return False
