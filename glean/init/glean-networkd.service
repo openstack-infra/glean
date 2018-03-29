@@ -1,0 +1,13 @@
+[Unit]
+Description=Glean system configuration
+Before=systemd-networkd.service
+Requires=systemd-networkd.service
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=%%GLEANSH_PATH%%/glean.sh --distro networkd
+RemainAfterExit=true
+
+[Install]
+WantedBy=multi-user.target

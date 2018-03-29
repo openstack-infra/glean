@@ -95,7 +95,6 @@ def main():
     if os.path.exists('/etc/gentoo-release'):
         log.info('installing openrc services')
         install('glean.openrc', '/etc/init.d/glean')
-        subprocess.call(['rc-update', 'add', 'glean', 'boot'])
     # Needs to check for the presence of systemd and systemctl
     # as apparently some packages may stage systemd init files
     # when systemd is not present.
@@ -111,11 +110,19 @@ def main():
         log.info("Installing systemd services")
         log.info("glean.sh in %s" % p)
 
-        install(
-            'glean@.service',
-            '/usr/lib/systemd/system/glean@.service',
-            mode='0644',
-            replacements={'GLEANSH_PATH': p})
+        if os.path.exists('/etc/gentoo-release'):
+            install(
+                'glean-networkd.service',
+                '/lib/systemd/system/glean.service',
+                mode='0644',
+                replacements={'GLEANSH_PATH': p})
+            subprocess.call(['systemctl', 'enable', 'glean.service'])
+        else:
+            install(
+                'glean@.service',
+                '/usr/lib/systemd/system/glean@.service',
+                mode='0644',
+                replacements={'GLEANSH_PATH': p})
         install(
             'glean-udev.rules',
             '/etc/udev/rules.d/99-glean.rules',
@@ -123,12 +130,8 @@ def main():
     elif os.path.exists('/etc/init'):
         log.info("Installing upstart services")
         install('glean.conf', '/etc/init/glean.conf')
-    elif os.path.exists('/etc/gentoo-release'):
-        # If installing on Gentoo and if systemd or upstart is not
-        # detected, then prevent the installation of sysv init scripts
-        # on Gentoo, which would overwrite the OpenRC init scripts as
-        # the sysv init script uses the same path.
-        pass
+    elif os.path.exists('/sbin/rc-update'):
+        subprocess.call(['rc-update', 'add', 'glean', 'boot'])
     else:
         log.info("Installing sysv services")
         install('glean.init', '/etc/init.d/glean')
