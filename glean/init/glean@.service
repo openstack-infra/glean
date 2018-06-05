@@ -5,6 +5,7 @@ Before=network-pre.target
 Wants=network-pre.target
 
 ConditionPathExists=!/etc/sysconfig/network-scripts/ifcfg-%I
+ConditionPathExists=!/etc/sysconfig/network/ifcfg-%I
 
 [Service]
 Type=oneshot

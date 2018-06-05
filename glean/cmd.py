@@ -59,15 +59,17 @@ def safe_open(*args, **kwargs):
             subprocess.call([SELINUX_RESTORECON, path])
 
 
-def _exists_rh_interface(name):
-    file_to_check = '/etc/sysconfig/network-scripts/ifcfg-{name}'.format(
+def _exists_rh_interface(name, distro):
+    file_to_check = _network_files(distro)['ifcfg'] + '-{name}'.format(
         name=name
         )
     return os.path.exists(file_to_check)
 
 
 def _is_suse(distro):
-    return distro in ('suse', 'opensuse')
+    # 'distro could be any of suse, opensuse,
+    # opensuse-leap, opensuse-tumbleweed
+    return 'suse' in distro
 
 
 def _network_files(distro):
@@ -298,7 +300,7 @@ def write_redhat_interfaces(interfaces, sys_interfaces, distro):
                 _write_rh_manual(interface_name, interface, distro))
     for mac, iname in sorted(
             sys_interfaces.items(), key=lambda x: x[1]):
-        if _exists_rh_interface(iname):
+        if _exists_rh_interface(iname, distro):
             # This interface already has a config file, move on
             log.debug("%s already has config file, skipping" % iname)
             continue
@@ -1049,7 +1051,8 @@ def write_static_network_info(
     if args.distro in ('debian', 'ubuntu'):
         files_to_write.update(
             write_debian_interfaces(interfaces, sys_interfaces))
-    elif args.distro in ('redhat', 'centos', 'fedora', 'suse', 'opensuse'):
+    elif args.distro in ('redhat', 'centos', 'fedora') or \
+            _is_suse(args.distro):
         files_to_write.update(
             write_redhat_interfaces(interfaces, sys_interfaces, args.distro))
     elif args.distro in 'gentoo':
@@ -1134,10 +1137,14 @@ def is_interface_vlan(iface, distro):
         file_name = '/etc/network/interfaces.d/%s.cfg' % iface
         if os.path.exists(file_name):
             return 'vlan-raw-device' in open(file_name).read()
-    elif distro in ('redhat', 'centos', 'fedora', 'suse', 'opensuse'):
+    elif distro in ('redhat', 'centos', 'fedora'):
         file_name = '/etc/sysconfig/network-scripts/ifcfg-%s' % iface
         if os.path.exists(file_name):
             return 'VLAN=YES' in open(file_name).read()
+    elif _is_suse(distro):
+        file_name = '/etc/sysconfig/network/ifcfg-%s' % iface
+        if os.path.exists(file_name):
+            return 'ETHERDEVICE' in open(file_name).read()
     elif distro in ('gentoo'):
         file_name = '/etc/conf.d/net.%s' % iface
         if os.path.exists(file_name):
@@ -1151,10 +1158,14 @@ def is_interface_bridge(iface, distro):
         file_name = '/etc/network/interfaces.d/%s.cfg' % iface
         if os.path.exists(file_name):
             return 'bridge_ports' in open(file_name).read().lower()
-    elif distro in ('redhat', 'centos', 'fedora', 'suse', 'opensuse'):
+    elif distro in ('redhat', 'centos', 'fedora'):
         file_name = '/etc/sysconfig/network-scripts/ifcfg-%s' % iface
         if os.path.exists(file_name):
             return 'type=bridge' in open(file_name).read().lower()
+    elif _is_suse(distro):
+        file_name = '/etc/sysconfig/network/ifcfg-%s' % iface
+        if os.path.exists(file_name):
+            return 'bridge=yes' in open(file_name).read().lower()
     elif distro in ('gentoo'):
         file_name = '/etc/conf.d/net.%s' % iface
         if os.path.exists(file_name):
