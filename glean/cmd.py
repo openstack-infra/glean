@@ -50,13 +50,12 @@ HAVE_SELINUX = os.path.exists(SELINUX_RESTORECON)
 @contextlib.contextmanager
 def safe_open(*args, **kwargs):
     f = open(*args, **kwargs)
-    try:
-        yield f
-    finally:
-        path = os.path.abspath(f.name)
-        if HAVE_SELINUX:
-            logging.debug("Restoring selinux context for %s" % path)
-            subprocess.call([SELINUX_RESTORECON, path])
+    yield f
+    f.close()
+    path = os.path.abspath(f.name)
+    if HAVE_SELINUX:
+        logging.debug("Restoring selinux context for %s" % path)
+        subprocess.call([SELINUX_RESTORECON, path])
 
 
 def _exists_rh_interface(name, distro):
