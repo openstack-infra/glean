@@ -1,0 +1,34 @@
+{
+    "links": [
+        {
+            "ethernet_mac_address": "fa:16:3e:c8:65:a0",
+            "id": "tap3c54ff58-02",
+            "mtu": 1500,
+            "type": "ovs",
+            "vif_id": "3c54ff58-02b5-499e-bed0-03530f89e624"
+        }
+    ],
+    "networks": [
+        {
+            "id": "network0",
+            "ip_address": "158.69.65.118",
+            "link": "tap3c54ff58-02",
+            "netmask": "255.255.224.0",
+            "network_id": "764d0ecb-f8a5-47d9-b034-53b5b61666a7",
+            "routes": [
+                {
+                    "gateway": "158.69.64.1",
+                    "netmask": "0.0.0.0",
+                    "network": "0.0.0.0"
+                }
+            ],
+            "type": "ipv4"
+        }
+    ],
+    "services": [
+        {
+            "address": "213.186.33.99",
+            "type": "dns"
+        }
+    ]
+}

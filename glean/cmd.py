@@ -1287,9 +1287,19 @@ def write_network_info_from_config_drive(args):
     If there is no meta_data.json in config-drive, it means that there
     is no config drive mounted- which means we know nothing.
 
+    Can set 'glean_ignore_interfaces' in nova metadata to ignore the
+    interface configuration specified by the config drive. This will
+    cause it to fallback to using dhcp configuration.
+
     Returns False on any issue, which will cause the writing of
     DHCP network files.
     """
+
+    config_drive = os.path.join(args.root, 'mnt/config')
+    meta_data_path = '%s/openstack/latest/meta_data.json' % config_drive
+    meta_data = {}
+    if os.path.exists(meta_data_path):
+        meta_data = json.load(open(meta_data_path))
 
     network_info = get_network_info(args)
 
@@ -1297,6 +1307,13 @@ def write_network_info_from_config_drive(args):
     if not args.skip_dns:
         dns = write_dns_info(get_dns_from_config_drive(network_info))
     interfaces = get_config_drive_interfaces(network_info)
+    if 'meta' in meta_data and 'glean_ignore_interfaces' in meta_data['meta']:
+        # Force DHCP to be used ignoring the interface information.
+        # Some clouds have neutron configured in such a way that we get
+        # interface config drive data that is at odds with the networking
+        # in the cloud. Note we set interfaces to {} so that fallback dhcp
+        # configuration can happen in write_static_network_info().
+        interfaces = {}
     sys_interfaces = get_sys_interfaces(args.interface, args)
 
     write_static_network_info(interfaces, sys_interfaces, dns, args)
