@@ -834,21 +834,8 @@ def write_debian_interfaces(interfaces, sys_interfaces):
                 result += "    vlan-raw-device {0}\n".format(vlan_raw_device)
                 result += "    hw-mac-address {0}\n".format(
                     interface['mac_address'])
-            if 'bond_mode' in interface:
-                result += _write_debian_bond_conf(interface_name,
-                                                  interface,
-                                                  sys_interfaces)
-
         elif interface['type'] == 'manual':
             result += "iface {0} inet manual\n".format(interface_name)
-            if 'bond_master' in interface:
-                result += "    bond-master {0}\n".format(
-                    interface['bond_master'])
-            if 'bond_mode' in interface:
-                result += _write_debian_bond_conf(interface_name,
-                                                  interface,
-                                                  sys_interfaces)
-
         else:
             # Static ipv4 and ipv6
             if interface['type'] == 'ipv6':
@@ -863,13 +850,6 @@ def write_debian_interfaces(interfaces, sys_interfaces):
                 name=interface_name, link_type=link_type)
             if vlan_raw_device:
                 result += "    vlan-raw-device {0}\n".format(vlan_raw_device)
-            if 'bond_master' in interface:
-                result += "    bond-master {0}\n".format(
-                    interface['bond_master'])
-            if 'bond_mode' in interface:
-                result += _write_debian_bond_conf(interface_name,
-                                                  interface,
-                                                  sys_interfaces)
             result += "    address {0}\n".format(interface['ip_address'])
 
             if interface['type'] == 'ipv4':
@@ -904,6 +884,13 @@ def write_debian_interfaces(interfaces, sys_interfaces):
                     result += route_del.format(
                         net=route['network'], mask=_netmask,
                         gw=route['gateway'], interface=interface_name)
+        if 'bond_master' in interface:
+            result += "    bond-master {0}\n".format(
+                interface['bond_master'])
+        if 'bond_mode' in interface:
+            result += _write_debian_bond_conf(interface_name,
+                                              interface,
+                                              sys_interfaces)
         files_to_write[iface_path] = result
 
     # Configure any interfaces not mentioned in the config drive data for DHCP.
