@@ -1,0 +1,7 @@
+### Write /etc/network/interfaces
+auto lo
+iface lo inet loopback
+source /etc/network/interfaces.d/*.cfg
+### Write /etc/network/interfaces.d/eth0.cfg
+auto eth0
+iface eth0 inet dhcp

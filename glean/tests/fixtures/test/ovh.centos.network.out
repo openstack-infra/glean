@@ -1,0 +1,8 @@
+### Write /etc/sysconfig/network-scripts/ifcfg-eth0
+# Automatically generated, do not edit
+DEVICE=eth0
+BOOTPROTO=dhcp
+HWADDR=fa:16:3e:c8:65:a0
+ONBOOT=yes
+NM_CONTROLLED=no
+TYPE=Ethernet

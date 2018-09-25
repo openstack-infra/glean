@@ -1,0 +1,5 @@
+### Write /etc/sysconfig/network/ifcfg-eth0
+# Automatically generated, do not edit
+BOOTPROTO=dhcp
+LLADDR=fa:16:3e:c8:65:a0
+STARTMODE=auto

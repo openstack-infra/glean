@@ -1,0 +1,10 @@
+### Write /etc/systemd/network/eth0.network
+# Automatically generated, do not edit
+[Match]
+MACAddress=fa:16:3e:c8:65:a0
+Name=eth0
+
+[Network]
+DHCP=ipv4
+IPv6AcceptRA=no
+

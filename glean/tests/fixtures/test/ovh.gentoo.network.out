@@ -1,0 +1,4 @@
+### Write /etc/conf.d/net.eth0
+# Automatically generated, do not edit
+config_eth0="dhcp"
+mac_eth0="fa:16:3e:c8:65:a0"
