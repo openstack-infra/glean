@@ -33,9 +33,6 @@ from glean._vendor import distro
 
 log = logging.getLogger("glean")
 
-slaves_add = "    post-up ifenslave {0} {1}\n"
-slaves_del = "    pre-down ifenslave -d {0} {1}\n"
-
 
 # Type value for permanent mac addrs as defined by the linux kernel.
 PERMANENT_ADDR_TYPE = '0'
@@ -766,6 +763,28 @@ def _exists_debian_interface(name):
     return os.path.exists(file_to_check)
 
 
+def _write_debian_bond_conf(interface_name, interface, sys_interfaces):
+    result = ""
+    if interface['mac_address']:
+        result += "    hwaddress {0}\n".format(
+            interface['mac_address'])
+    result += "    bond-mode {0}\n".format(interface['bond_mode'])
+    result += "    bond-miimon {0}\n".format(
+        interface.get('bond_miimon', 0))
+    result += "    bond-lacp-rate {0}\n".format(
+        interface.get('bond_lacp_rate', 'slow'))
+    result += "    bond-xmit_hash_policy {0}\n".format(
+        interface.get('bond_xmit_hash_policy', 'layer2'))
+    slave_devices = [sys_interfaces[mac]
+                     for mac in interface['raw_macs']]
+    slaves = ' '.join(slave_devices)
+    result += "    bond-slaves none\n"
+    result += "    post-up ifenslave {0} {1}\n".format(interface_name, slaves)
+    result += "    pre-down ifenslave -d {0} {1}\n".format(
+        interface_name, slaves)
+    return result
+
+
 def write_debian_interfaces(interfaces, sys_interfaces):
     eni_path = '/etc/network/interfaces'
     eni_d_path = eni_path + '.d'
@@ -812,22 +831,9 @@ def write_debian_interfaces(interfaces, sys_interfaces):
                 result += "    hw-mac-address {0}\n".format(
                     interface['mac_address'])
             if 'bond_mode' in interface:
-                if interface['mac_address']:
-                    result += "    hwaddress {0}\n".format(
-                        interface['mac_address'])
-                result += "    bond-mode {0}\n".format(interface['bond_mode'])
-                result += "    bond-miimon {0}\n".format(
-                    interface.get('bond_miimon', 0))
-                result += "    bond-lacp-rate {0}\n".format(
-                    interface.get('bond_lacp_rate', 'slow'))
-                result += "    bond-xmit_hash_policy {0}\n".format(
-                    interface.get('bond_xmit_hash_policy', 'layer2'))
-                slave_devices = [sys_interfaces[mac]
-                                 for mac in interface['raw_macs']]
-                slaves = ' '.join(slave_devices)
-                result += "    bond-slaves none\n"
-                result += slaves_add.format(interface_name, slaves)
-                result += slaves_del.format(interface_name, slaves)
+                result += _write_debian_bond_conf(interface_name,
+                                                  interface,
+                                                  sys_interfaces)
             if iface_path in files_to_write:
                 # There are more than one address for this interface
                 files_to_write[iface_path] += result
@@ -842,22 +848,9 @@ def write_debian_interfaces(interfaces, sys_interfaces):
                 result += "    bond-master {0}\n".format(
                     interface['bond_master'])
             if 'bond_mode' in interface:
-                if interface['mac_address']:
-                    result += "    hwaddress {0}\n".format(
-                        interface['mac_address'])
-                result += "    bond-mode {0}\n".format(interface['bond_mode'])
-                result += "    bond-miimon {0}\n".format(
-                    interface.get('bond_miimon', 0))
-                result += "    bond-lacp-rate {0}\n".format(
-                    interface.get('bond_lacp_rate', 'slow'))
-                result += "    bond-xmit_hash_policy {0}\n".format(
-                    interface.get('bond_xmit_hash_policy', 'layer2'))
-                slave_devices = [sys_interfaces[mac]
-                                 for mac in interface['raw_macs']]
-                slaves = ' '.join(slave_devices)
-                result += "    bond-slaves none\n"
-                result += slaves_add.format(interface_name, slaves)
-                result += slaves_del.format(interface_name, slaves)
+                result += _write_debian_bond_conf(interface_name,
+                                                  interface,
+                                                  sys_interfaces)
             if iface_path in files_to_write:
                 # There are more than one address for this interface
                 files_to_write[iface_path] += result
@@ -885,22 +878,9 @@ def write_debian_interfaces(interfaces, sys_interfaces):
             result += "    bond-master {0}\n".format(
                 interface['bond_master'])
         if 'bond_mode' in interface:
-            if interface['mac_address']:
-                result += "    hwaddress {0}\n".format(
-                    interface['mac_address'])
-            result += "    bond-mode {0}\n".format(interface['bond_mode'])
-            result += "    bond-miimon {0}\n".format(
-                interface.get('bond_miimon', 0))
-            result += "    bond-lacp-rate {0}\n".format(
-                interface.get('bond_lacp_rate', 'slow'))
-            result += "    bond-xmit_hash_policy {0}\n".format(
-                interface.get('bond_xmit_hash_policy', 'layer2'))
-            slave_devices = [sys_interfaces[mac]
-                             for mac in interface['raw_macs']]
-            slaves = ' '.join(slave_devices)
-            result += "    bond-slaves none\n"
-            result += slaves_add.format(interface_name, slaves)
-            result += slaves_del.format(interface_name, slaves)
+            result += _write_debian_bond_conf(interface_name,
+                                              interface,
+                                              sys_interfaces)
         result += "    address {0}\n".format(interface['ip_address'])
 
         if interface['type'] == 'ipv4':
