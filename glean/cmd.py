@@ -837,10 +837,8 @@ def write_debian_interfaces(interfaces, sys_interfaces):
                 result += _write_debian_bond_conf(interface_name,
                                                   interface,
                                                   sys_interfaces)
-            files_to_write[iface_path] = result
-            continue
 
-        if interface['type'] == 'manual':
+        elif interface['type'] == 'manual':
             result += "iface {0} inet manual\n".format(interface_name)
             if 'bond_master' in interface:
                 result += "    bond-master {0}\n".format(
@@ -849,65 +847,62 @@ def write_debian_interfaces(interfaces, sys_interfaces):
                 result += _write_debian_bond_conf(interface_name,
                                                   interface,
                                                   sys_interfaces)
-            files_to_write[iface_path] = result
-            continue
 
-        if interface['type'] == 'ipv6':
-            link_type = "inet6"
-        elif interface['type'] == 'ipv4':
-            link_type = "inet"
         else:
-            link_type = None
-
-        # We do not know this type of entry
-        if not link_type:
-            continue
-
-        result += "iface {name} {link_type} static\n".format(
-            name=interface_name, link_type=link_type)
-        if vlan_raw_device:
-            result += "    vlan-raw-device {0}\n".format(vlan_raw_device)
-        if 'bond_master' in interface:
-            result += "    bond-master {0}\n".format(
-                interface['bond_master'])
-        if 'bond_mode' in interface:
-            result += _write_debian_bond_conf(interface_name,
-                                              interface,
-                                              sys_interfaces)
-        result += "    address {0}\n".format(interface['ip_address'])
-
-        if interface['type'] == 'ipv4':
-            result += "    netmask {0}\n".format(interface['netmask'])
-        else:
-            result += "    netmask {0}\n".format(
-                utils.ipv6_netmask_length(interface['netmask']))
-
-        for route in interface['routes']:
-            if ((route['network'] == '0.0.0.0' and
-                    route['netmask'] == '0.0.0.0') or
-                (route['network'] == '::' and
-                    route['netmask'] == '::')):
-                result += "    gateway {0}\n".format(route['gateway'])
+            # Static ipv4 and ipv6
+            if interface['type'] == 'ipv6':
+                link_type = "inet6"
+            elif interface['type'] == 'ipv4':
+                link_type = "inet"
             else:
-                if interface['type'] == 'ipv4':
-                    route_add = ("    up route add -net {net} netmask "
-                                 "{mask} gw {gw} || true\n")
-                    route_del = ("    down route del -net {net} netmask "
-                                 "{mask} gw {gw} || true\n")
-                    _netmask = route['netmask']
-                else:
-                    route_add = ("    up ip -6 route add {net}/{mask} "
-                                 "via {gw} dev {interface} || true\n")
-                    route_del = ("    down ip -6 route del {net}/{mask} "
-                                 "via {gw} dev {interface} || true\n")
-                    _netmask = utils.ipv6_netmask_length(route['netmask'])
+                # We do not know this type of entry
+                continue
 
-                result += route_add.format(
-                    net=route['network'], mask=_netmask, gw=route['gateway'],
-                    interface=interface_name)
-                result += route_del.format(
-                    net=route['network'], mask=_netmask, gw=route['gateway'],
-                    interface=interface_name)
+            result += "iface {name} {link_type} static\n".format(
+                name=interface_name, link_type=link_type)
+            if vlan_raw_device:
+                result += "    vlan-raw-device {0}\n".format(vlan_raw_device)
+            if 'bond_master' in interface:
+                result += "    bond-master {0}\n".format(
+                    interface['bond_master'])
+            if 'bond_mode' in interface:
+                result += _write_debian_bond_conf(interface_name,
+                                                  interface,
+                                                  sys_interfaces)
+            result += "    address {0}\n".format(interface['ip_address'])
+
+            if interface['type'] == 'ipv4':
+                result += "    netmask {0}\n".format(interface['netmask'])
+            else:
+                result += "    netmask {0}\n".format(
+                    utils.ipv6_netmask_length(interface['netmask']))
+
+            for route in interface['routes']:
+                if ((route['network'] == '0.0.0.0' and
+                        route['netmask'] == '0.0.0.0') or
+                    (route['network'] == '::' and
+                        route['netmask'] == '::')):
+                    result += "    gateway {0}\n".format(route['gateway'])
+                else:
+                    if interface['type'] == 'ipv4':
+                        route_add = ("    up route add -net {net} netmask "
+                                     "{mask} gw {gw} || true\n")
+                        route_del = ("    down route del -net {net} netmask "
+                                     "{mask} gw {gw} || true\n")
+                        _netmask = route['netmask']
+                    else:
+                        route_add = ("    up ip -6 route add {net}/{mask} "
+                                     "via {gw} dev {interface} || true\n")
+                        route_del = ("    down ip -6 route del {net}/{mask} "
+                                     "via {gw} dev {interface} || true\n")
+                        _netmask = utils.ipv6_netmask_length(route['netmask'])
+
+                    result += route_add.format(
+                        net=route['network'], mask=_netmask,
+                        gw=route['gateway'], interface=interface_name)
+                    result += route_del.format(
+                        net=route['network'], mask=_netmask,
+                        gw=route['gateway'], interface=interface_name)
         files_to_write[iface_path] = result
 
     # Configure any interfaces not mentioned in the config drive data for DHCP.
