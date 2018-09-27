@@ -819,11 +819,16 @@ def write_debian_interfaces(interfaces, sys_interfaces):
         if os.path.exists(iface_path):
             continue
 
-        iface_path = os.path.join(eni_d_path, '%s.cfg' % interface_name)
+        if iface_path not in files_to_write:
+            # Write the header if this is the first time editing
+            # this interface.
+            result = "auto {0}\n".format(interface_name)
+        else:
+            # Append to existing config
+            result = files_to_write[iface_path]
 
         if interface['type'] == 'ipv4_dhcp':
-            header = "auto {0}\n".format(interface_name)
-            result = "iface {0} inet dhcp\n".format(interface_name)
+            result += "iface {0} inet dhcp\n".format(interface_name)
             if vlan_raw_device is not None:
                 result += "    vlan-raw-device {0}\n".format(vlan_raw_device)
                 result += "    hw-mac-address {0}\n".format(
@@ -832,16 +837,11 @@ def write_debian_interfaces(interfaces, sys_interfaces):
                 result += _write_debian_bond_conf(interface_name,
                                                   interface,
                                                   sys_interfaces)
-            if iface_path in files_to_write:
-                # There are more than one address for this interface
-                files_to_write[iface_path] += result
-            else:
-                files_to_write[iface_path] = header + result
+            files_to_write[iface_path] = result
             continue
 
         if interface['type'] == 'manual':
-            header = "auto {0}\n".format(interface_name)
-            result = "iface {0} inet manual\n".format(interface_name)
+            result += "iface {0} inet manual\n".format(interface_name)
             if 'bond_master' in interface:
                 result += "    bond-master {0}\n".format(
                     interface['bond_master'])
@@ -849,11 +849,7 @@ def write_debian_interfaces(interfaces, sys_interfaces):
                 result += _write_debian_bond_conf(interface_name,
                                                   interface,
                                                   sys_interfaces)
-            if iface_path in files_to_write:
-                # There are more than one address for this interface
-                files_to_write[iface_path] += result
-            else:
-                files_to_write[iface_path] = header + result
+            files_to_write[iface_path] = result
             continue
 
         if interface['type'] == 'ipv6':
@@ -867,8 +863,7 @@ def write_debian_interfaces(interfaces, sys_interfaces):
         if not link_type:
             continue
 
-        header = "auto {0}\n".format(interface_name)
-        result = "iface {name} {link_type} static\n".format(
+        result += "iface {name} {link_type} static\n".format(
             name=interface_name, link_type=link_type)
         if vlan_raw_device:
             result += "    vlan-raw-device {0}\n".format(vlan_raw_device)
@@ -913,12 +908,7 @@ def write_debian_interfaces(interfaces, sys_interfaces):
                 result += route_del.format(
                     net=route['network'], mask=_netmask, gw=route['gateway'],
                     interface=interface_name)
-
-        if iface_path in files_to_write:
-            # There are more than one address for this interface
-            files_to_write[iface_path] += result
-        else:
-            files_to_write[iface_path] = header + result
+        files_to_write[iface_path] = result
 
     # Configure any interfaces not mentioned in the config drive data for DHCP.
     for mac, iname in sorted(
