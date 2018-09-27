@@ -758,11 +758,6 @@ def write_gentoo_interfaces(interfaces, sys_interfaces):
     return files_to_write
 
 
-def _exists_debian_interface(name):
-    file_to_check = '/etc/network/interfaces.d/{name}.cfg'.format(name=name)
-    return os.path.exists(file_to_check)
-
-
 def _write_debian_bond_conf(interface_name, interface, sys_interfaces):
     result = ""
     if interface['mac_address']:
@@ -801,6 +796,8 @@ def write_debian_interfaces(interfaces, sys_interfaces):
         if not set(sys_interfaces).intersection(set(raw_macs)):
             continue
 
+        # Determine the debian interface name and skip configuration for
+        # this interface if config already exists for it.
         vlan_raw_device = None
         if 'vlan_id' in interface:
             # raw_macs will have a single entry if the vlan device is a
@@ -818,7 +815,8 @@ def write_debian_interfaces(interfaces, sys_interfaces):
         else:
             interface_name = sys_interfaces[interface['mac_address']]
 
-        if _exists_debian_interface(interface_name):
+        iface_path = os.path.join(eni_d_path, '%s.cfg' % interface_name)
+        if os.path.exists(iface_path):
             continue
 
         iface_path = os.path.join(eni_d_path, '%s.cfg' % interface_name)
@@ -922,9 +920,11 @@ def write_debian_interfaces(interfaces, sys_interfaces):
         else:
             files_to_write[iface_path] = header + result
 
+    # Configure any interfaces not mentioned in the config drive data for DHCP.
     for mac, iname in sorted(
             sys_interfaces.items(), key=lambda x: x[1]):
-        if _exists_debian_interface(iname):
+        iface_path = os.path.join(eni_d_path, '%s.cfg' % iname)
+        if os.path.exists(iface_path):
             # This interface already has a config file, move on
             continue
         inter_macs = [intf['mac_address'] for intf in interfaces.values()]
@@ -935,7 +935,7 @@ def write_debian_interfaces(interfaces, sys_interfaces):
             continue
         result = "auto {0}\n".format(iname)
         result += "iface {0} inet dhcp\n".format(iname)
-        files_to_write[os.path.join(eni_d_path, "%s.cfg" % iname)] = result
+        files_to_write[iface_path] = result
     return files_to_write
 
 
