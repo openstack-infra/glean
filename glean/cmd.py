@@ -535,7 +535,7 @@ def write_networkd_interfaces(interfaces, sys_interfaces):
 
     for mac, iname in sorted(
             sys_interfaces.items(), key=lambda x: x[1]):
-        if _exists_gentoo_interface(iname):
+        if _exists_networkd_interface(iname):
             # This interface already has a config file, move on
             log.debug("%s already has config file, skipping" % iname)
             continue
@@ -593,6 +593,12 @@ def write_networkd_interfaces(interfaces, sys_interfaces):
             file_contents += '\n'
         files_to_write['{path}'.format(path=networkd_file)] = file_contents
     return files_to_write
+
+
+def _exists_networkd_interface(name):
+    network_file = '/etc/systemd/network/{name}.network'.format(name=name)
+    netdev_file = '/etc/systemd/network/{name}.netdev'.format(name=name)
+    return (os.path.exists(network_file) or os.path.exists(netdev_file))
 
 
 def _exists_gentoo_interface(name):
