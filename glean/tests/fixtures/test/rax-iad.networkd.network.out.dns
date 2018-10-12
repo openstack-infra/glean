@@ -1,0 +1,52 @@
+### Write /etc/resolv.conf
+nameserver 69.20.0.196
+nameserver 69.20.0.164
+### Write /etc/systemd/network/eth0.network
+# Automatically generated, do not edit
+[Match]
+MACAddress=bc:76:4e:20:d7:2f
+Name=eth0
+
+[Network]
+DNS=1.2.3.4
+DNS=1111:2222:3333:4444::1234
+IPv6AcceptRA=no
+
+[Address]
+Address=146.20.110.113/24
+
+[Address]
+Address=2001:4802:7807:103:be76:4eff:fe20:d72f/64
+
+[Route]
+Destination=0.0.0.0/0
+Gateway=146.20.110.1
+
+[Route]
+Destination=::/0
+Gateway=fe80::def
+
+[Route]
+Destination=fd30::/48
+Gateway=fe80::f001
+
+### Write /etc/systemd/network/eth1.network
+# Automatically generated, do not edit
+[Match]
+MACAddress=bc:76:4e:20:d7:33
+Name=eth1
+
+[Network]
+IPv6AcceptRA=no
+
+[Address]
+Address=10.210.32.174/19
+
+[Route]
+Destination=10.176.0.0/12
+Gateway=10.210.32.1
+
+[Route]
+Destination=10.208.0.0/12
+Gateway=10.210.32.1
+
