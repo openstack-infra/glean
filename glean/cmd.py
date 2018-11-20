@@ -84,7 +84,8 @@ def _network_files(distro):
     return network_files
 
 
-def _network_config(distro):
+def _network_config(args):
+    distro = args.distro
     network_config = {}
     if _is_suse(distro):
         header = "\n".join(["# Automatically generated, do not edit",
@@ -172,9 +173,10 @@ def _set_rh_vlan(name, interface, distro):
     return results
 
 
-def _write_rh_interface(name, interface, distro):
+def _write_rh_interface(name, interface, args):
+    distro = args.distro
     files_to_write = dict()
-    results = _network_config(distro)["static"].format(
+    results = _network_config(args)["static"].format(
         bootproto="static",
         name=name,
         hwaddr=interface['mac_address'],
@@ -221,9 +223,10 @@ def _write_rh_interface(name, interface, distro):
     return files_to_write
 
 
-def _write_rh_dhcp(name, interface, distro):
+def _write_rh_dhcp(name, interface, args):
+    distro = args.distro
     filename = _network_files(distro)["ifcfg"] + '-{name}'.format(name=name)
-    results = _network_config(distro)["dhcp"].format(
+    results = _network_config(args)["dhcp"].format(
         bootproto="dhcp", name=name, hwaddr=interface['mac_address'])
     results += _set_rh_vlan(name, interface, distro)
     # set_rh_bonding takes results as argument so we need to assign
@@ -233,9 +236,10 @@ def _write_rh_dhcp(name, interface, distro):
     return {filename: results}
 
 
-def _write_rh_manual(name, interface, distro):
+def _write_rh_manual(name, interface, args):
+    distro = args.distro
     filename = _network_files(distro)["ifcfg"] + '-{name}'.format(name=name)
-    results = _network_config(distro)["none"].format(
+    results = _network_config(args)["none"].format(
         bootproto="none", name=name, hwaddr=interface['mac_address'])
     results += _set_rh_vlan(name, interface, distro)
     # set_rh_bonding takes results as argument so we need to assign
@@ -245,7 +249,7 @@ def _write_rh_manual(name, interface, distro):
     return {filename: results}
 
 
-def write_redhat_interfaces(interfaces, sys_interfaces, distro):
+def write_redhat_interfaces(interfaces, sys_interfaces, args):
     files_to_write = dict()
     # Sort the interfaces by id so that we'll have consistent output order
     for iname, interface in sorted(
@@ -287,16 +291,16 @@ def write_redhat_interfaces(interfaces, sys_interfaces, distro):
 
         if interface['type'] == 'ipv4':
             files_to_write.update(
-                _write_rh_interface(interface_name, interface, distro))
+                _write_rh_interface(interface_name, interface, args))
         if interface['type'] == 'ipv4_dhcp':
             files_to_write.update(
-                _write_rh_dhcp(interface_name, interface, distro))
+                _write_rh_dhcp(interface_name, interface, args))
         if interface['type'] == 'manual':
             files_to_write.update(
-                _write_rh_manual(interface_name, interface, distro))
+                _write_rh_manual(interface_name, interface, args))
     for mac, iname in sorted(
             sys_interfaces.items(), key=lambda x: x[1]):
-        if _exists_rh_interface(iname, distro):
+        if _exists_rh_interface(iname, args.distro):
             # This interface already has a config file, move on
             log.debug("%s already has config file, skipping" % iname)
             continue
@@ -308,7 +312,7 @@ def write_redhat_interfaces(interfaces, sys_interfaces, distro):
             log.debug("%s configured via config-drive" % mac)
             continue
         files_to_write.update(_write_rh_dhcp(iname, {'mac_address': mac},
-                                             distro))
+                                             args))
     return files_to_write
 
 
@@ -1005,7 +1009,7 @@ def write_static_network_info(
     elif args.distro in ('redhat', 'centos', 'fedora') or \
             _is_suse(args.distro):
         files_to_write.update(
-            write_redhat_interfaces(interfaces, sys_interfaces, args.distro))
+            write_redhat_interfaces(interfaces, sys_interfaces, args))
     elif args.distro in 'gentoo':
         files_to_write.update(
             write_gentoo_interfaces(interfaces, sys_interfaces)
