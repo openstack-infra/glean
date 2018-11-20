@@ -1385,7 +1385,11 @@ def set_hostname_from_config_drive(args):
                     fh.write(u'%s %s\n' % (host_value, host))
 
 
-def main():
+def main(argv=None):
+
+    if argv is None:
+        args = sys.argv[1:]
+
     parser = argparse.ArgumentParser(description="Static network config")
     parser.add_argument(
         '-n', '--noop', action='store_true', help='Do not write files')
@@ -1414,7 +1418,7 @@ def main():
     parser.add_argument(
         '--debug', dest='debug', action='store_true',
         help="Enable debugging output")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     if args.debug:
         logging.basicConfig(level=logging.DEBUG)

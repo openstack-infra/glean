@@ -17,7 +17,6 @@ import errno
 import functools
 import json
 import os
-import sys
 
 import mock
 from oslotest import base
@@ -150,7 +149,6 @@ class TestGlean(base.BaseTestCase):
     @mock.patch('os.listdir', new_callable=mock.Mock)
     @mock.patch('os.system', return_value=0, new_callable=mock.Mock)
     @mock.patch('glean.cmd.open', new_callable=mock.Mock)
-    @mock.patch.object(sys, 'argv', ['./glean', '--hostname'])
     def _assert_distro_provider(self, distro, provider, interface,
                                 mock_open,
                                 mock_os_system,
@@ -182,14 +180,17 @@ class TestGlean(base.BaseTestCase):
         mock_open.side_effect = functools.partial(
             self.open_side_effect, provider)
 
-        sys.argv.append('--distro=%s' % distro.lower())
+        # default args
+        argv = ['--hostname']
+
+        argv.append('--distro=%s' % distro.lower())
 
         if interface:
-            sys.argv.append('--interface=%s' % interface)
+            argv.append('--interface=%s' % interface)
         if skip_dns:
-            sys.argv.append('--skip-dns')
+            argv.append('--skip-dns')
 
-        cmd.main()
+        cmd.main(argv)
 
         output_filename = '%s.%s.network.out' % (provider, distro.lower())
         output_path = os.path.join(sample_data_path, 'test', output_filename)
