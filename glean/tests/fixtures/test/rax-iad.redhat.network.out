@@ -9,7 +9,7 @@ HWADDR=bc:76:4e:20:d7:2f
 IPADDR=146.20.110.113
 NETMASK=255.255.255.0
 ONBOOT=yes
-NM_CONTROLLED=no
+%NM_CONTROLLED%
 DEFROUTE=yes
 GATEWAY=146.20.110.1
 ### Write /etc/sysconfig/network-scripts/ifcfg-eth1
@@ -20,7 +20,7 @@ HWADDR=bc:76:4e:20:d7:33
 IPADDR=10.210.32.174
 NETMASK=255.255.224.0
 ONBOOT=yes
-NM_CONTROLLED=no
+%NM_CONTROLLED%
 ### Write /etc/sysconfig/network-scripts/route-eth1
 ADDRESS0=10.176.0.0
 NETMASK0=255.240.0.0

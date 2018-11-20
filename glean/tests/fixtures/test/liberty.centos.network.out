@@ -9,7 +9,7 @@ HWADDR=bc:76:4e:01:62:86
 IPADDR=23.253.229.154
 NETMASK=255.255.255.0
 ONBOOT=yes
-NM_CONTROLLED=no
+%NM_CONTROLLED%
 DEFROUTE=yes
 GATEWAY=23.253.229.1
 ### Write /etc/sysconfig/network-scripts/ifcfg-eth1
@@ -20,14 +20,14 @@ HWADDR=bc:76:4e:05:7b:06
 IPADDR=10.208.169.118
 NETMASK=255.255.224.0
 ONBOOT=yes
-NM_CONTROLLED=no
+%NM_CONTROLLED%
 ### Write /etc/sysconfig/network-scripts/ifcfg-eth3
 # Automatically generated, do not edit
 DEVICE=eth3
 BOOTPROTO=dhcp
 HWADDR=bc:76:4e:12:a4:bb
 ONBOOT=yes
-NM_CONTROLLED=no
+%NM_CONTROLLED%
 TYPE=Ethernet
 ### Write /etc/sysconfig/network-scripts/ifcfg-eth4.25
 # Automatically generated, do not edit
@@ -35,7 +35,7 @@ DEVICE=eth4.25
 BOOTPROTO=dhcp
 HWADDR=bc:76:4e:12:a4:bc
 ONBOOT=yes
-NM_CONTROLLED=no
+%NM_CONTROLLED%
 TYPE=Ethernet
 VLAN=yes
 ### Write /etc/sysconfig/network-scripts/ifcfg-eth4.26
@@ -44,7 +44,7 @@ DEVICE=eth4.26
 BOOTPROTO=dhcp
 HWADDR=bc:76:4e:12:a4:bd
 ONBOOT=yes
-NM_CONTROLLED=no
+%NM_CONTROLLED%
 TYPE=Ethernet
 VLAN=yes
 ### Write /etc/sysconfig/network-scripts/route-eth1
@@ -60,7 +60,7 @@ DEVICE=eth5
 BOOTPROTO=none
 HWADDR=bc:76:4e:05:7b:13
 ONBOOT=yes
-NM_CONTROLLED=no
+%NM_CONTROLLED%
 TYPE=Ethernet
 SLAVE=yes
 MASTER=bond0
@@ -70,7 +70,7 @@ DEVICE=eth6
 BOOTPROTO=none
 HWADDR=bc:76:4e:05:7b:14
 ONBOOT=yes
-NM_CONTROLLED=no
+%NM_CONTROLLED%
 TYPE=Ethernet
 SLAVE=yes
 MASTER=bond0
@@ -80,7 +80,7 @@ DEVICE=bond0
 BOOTPROTO=dhcp
 HWADDR=bc:76:4e:05:7b:13
 ONBOOT=yes
-NM_CONTROLLED=no
+%NM_CONTROLLED%
 TYPE=Ethernet
 ### Write /etc/sysconfig/network-scripts/ifcfg-eth7
 # Automatically generated, do not edit
@@ -88,7 +88,7 @@ DEVICE=eth7
 BOOTPROTO=none
 HWADDR=bc:76:4e:05:7b:15
 ONBOOT=yes
-NM_CONTROLLED=no
+%NM_CONTROLLED%
 TYPE=Ethernet
 SLAVE=yes
 MASTER=bond1
@@ -98,7 +98,7 @@ DEVICE=eth8
 BOOTPROTO=none
 HWADDR=bc:76:4e:05:7b:16
 ONBOOT=yes
-NM_CONTROLLED=no
+%NM_CONTROLLED%
 TYPE=Ethernet
 SLAVE=yes
 MASTER=bond1
@@ -108,7 +108,7 @@ DEVICE=bond1
 BOOTPROTO=none
 HWADDR=bc:76:4e:05:7b:15
 ONBOOT=yes
-NM_CONTROLLED=no
+%NM_CONTROLLED%
 TYPE=Ethernet
 ### Write /etc/sysconfig/network-scripts/ifcfg-bond1.27
 # Automatically generated, do not edit
@@ -116,6 +116,6 @@ DEVICE=bond1.27
 BOOTPROTO=dhcp
 HWADDR=bc:76:4e:12:a4:be
 ONBOOT=yes
-NM_CONTROLLED=no
+%NM_CONTROLLED%
 TYPE=Ethernet
 VLAN=yes

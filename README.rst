@@ -41,29 +41,58 @@ It will also handle `authorized_keys` and host-name info provided from
 How does glean do this?
 +++++++++++++++++++++++
 
+Glean determines the network configuration environment for the running
+platform and configures the interfaces appropriately.
+
 systemd environment
 ===================
 
-glean install will add a `udev` rules file (`99-glean.rules`) that
-triggers on any network device being added.  This will run the
-`glean@.service` systemd template for the interface specified.
+On platforms where systemd is detected `glean-install` will add a
+`udev` rules file (`99-glean.rules`) that triggers on any network
+device being added.  This will run the `glean@.service` systemd
+template for the interface specified.
 
 This systemd unit firstly determines if there is already a
 `/etc/sysconfig/network/` configuration for the interface; if so, the
 interface is considered configured and skipped.
 
-If not, glean is started with the interface specified.  The
-configuration drive is probed to see if network configuration for the
-interface is available.  If so, it will be added, otherwise the
-interface will configured for DHCP.
+If not, glean is started with the interface that triggered this event
+specified as an argument.  The configuration drive is probed to see if
+network configuration for the interface is available.  If so, it will
+be added, otherwise the interface will configured for DHCP.
 
 .. note ::
 
-   glean uses the network init scripts service ``network.service`` on
-   RedHat platforms (or the equivalent on other platforms).  You should
-   ensure this service is enabled and other tools such as
-   NetworkManager are disabled for correct operation.
+   By default glean provides configuration for the network init
+   scripts service ``network.service`` on RedHat platforms (or the
+   equivalent on other platforms).  You should ensure this service is
+   enabled and other tools such as NetworkManager are disabled for
+   correct operation in this mode.  Note on Fedora 29 onwards, this is
+   in a separate package `network-scripts` and is considered
+   deprecated.
 
+   Alternatively, to use NetworkManager with the `ifcfg-rh` plugin
+   with to manage the interfaces, call `glean-install` with the
+   `--use-nm` flag.  In this case, ensure NetworkManager is installed.
+   This will trigger glean to write out configuration files that are
+   suitable for use with NetworkManager and use a slightly different
+   service file that doesn't trigger legacy tools like `ifup`.
+
+
+networkd
+========
+
+`networkd` support is implemented as a separate distribution type.
+Currently it is only supported on Gentoo, and will be automatically
+selected by `glean-install`.  It will similarly install a systemd
+service file or openrc config file (both are supported on Gentoo) and
+udev rules to call glean.
+
+Other platforms
+===============
+
+`upstart` and `sysv` environments are also supported.  These will have
+init scripts installed to run glean at boot.
 
 How do I use glean?
 -------------------

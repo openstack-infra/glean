@@ -81,6 +81,8 @@ def main():
     parser = argparse.ArgumentParser(
         description='Install glean init components')
 
+    parser.add_argument("-n", "--use-nm", help="Use NetworkManager",
+                        action="store_true")
     parser.add_argument("-q", "--quiet", help="Be very quiet",
                         action="store_true")
 
@@ -118,8 +120,14 @@ def main():
                 replacements={'GLEANSH_PATH': p})
             subprocess.call(['systemctl', 'enable', 'glean.service'])
         else:
+            log.info("Installing %s NetworkManager support" %
+                     "with" if args.use_nm else "without")
+            if args.use_nm:
+                service_file = 'glean-nm@.service'
+            else:
+                service_file = 'glean@.service'
             install(
-                'glean@.service',
+                service_file,
                 '/usr/lib/systemd/system/glean@.service',
                 mode='0644',
                 replacements={'GLEANSH_PATH': p})
@@ -127,6 +135,12 @@ def main():
             'glean-udev.rules',
             '/etc/udev/rules.d/99-glean.rules',
             mode='0644')
+        if args.use_nm:
+            # glean handles resolv.conf, so this turns off nm touching
+            # it
+            install('nm-no-resolv-handling.conf',
+                    '/etc/NetworkManager/conf.d/nm-no-resolv-handling.conf',
+                    mode='0644')
     elif os.path.exists('/etc/init'):
         log.info("Installing upstart services")
         install('glean.conf', '/etc/init/glean.conf')

@@ -157,7 +157,8 @@ class TestGlean(base.BaseTestCase):
                                 mock_os_symlink,
                                 mock_os_unlink,
                                 mock_call,
-                                skip_dns=False):
+                                skip_dns=False,
+                                use_nm=False):
         """Main test function
 
         :param distro: distro to return from "distro.linux_distribution()"
@@ -165,6 +166,7 @@ class TestGlean(base.BaseTestCase):
                          out files
         :param interface: --interface argument; None for no argument
         :param skip_dns: --skip-dns argument; False for no argument
+        :param use_nm: --use-nm argument; False for no argument
         """
 
         # These functions are watching the path and faking results
@@ -189,6 +191,8 @@ class TestGlean(base.BaseTestCase):
             argv.append('--interface=%s' % interface)
         if skip_dns:
             argv.append('--skip-dns')
+        if use_nm:
+            argv.append('--use-nm')
 
         cmd.main(argv)
 
@@ -197,7 +201,13 @@ class TestGlean(base.BaseTestCase):
 
         # Generate a list of (dest, content) into write_blocks to assert
         write_blocks = []
-        lines = open(output_path).readlines()
+        lines = []
+        with open(output_path) as f:
+            for line in f:
+                if line == '%NM_CONTROLLED%\n':
+                        line = 'NM_CONTROLLED=%s\n' % \
+                            ("yes" if use_nm else "no")
+                lines.append(line)
         write_dest = None
         write_content = None
         for line in lines:
@@ -267,3 +277,8 @@ class TestGlean(base.BaseTestCase):
         with mock.patch('glean.systemlock.Lock'):
             self._assert_distro_provider(
                 self.distro, self.style, None, skip_dns=True)
+
+    def test_glean_nm(self):
+        with mock.patch('glean.systemlock.Lock'):
+            self._assert_distro_provider(
+                self.distro, self.style, 'eth0', use_nm=True)

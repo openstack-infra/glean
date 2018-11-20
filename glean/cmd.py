@@ -104,7 +104,9 @@ def _network_config(args):
                             "DEVICE={name}",
                             "BOOTPROTO={bootproto}",
                             "HWADDR={hwaddr}"])
-        footer = "\n".join(["ONBOOT=yes", "NM_CONTROLLED=no",
+        footer = "\n".join(["ONBOOT=yes",
+                            "NM_CONTROLLED=%s" %
+                            ("yes" if args.use_nm else "no"),
                             "TYPE=Ethernet"]) + "\n"
 
         network_config = {
@@ -182,7 +184,6 @@ def _write_rh_interface(name, interface, args):
         hwaddr=interface['mac_address'],
         ip_address=interface['ip_address'],
         netmask=interface['netmask'],
-
     )
     results += _set_rh_vlan(name, interface, distro)
     # set_rh_bonding takes results as argument so we need to assign
@@ -1417,6 +1418,10 @@ def main(argv=None):
         '--skip-network', dest='skip', action='store_true',
         help="Do not write network info")
     parser.add_argument(
+        '--use-nm', dest='use_nm', action='store_true',
+        help=('Use NetworkManager instead of legacy'
+              'configuration scripts to manage interfaces'))
+    parser.add_argument(
         '--skip-dns', dest='skip_dns', action='store_true',
         help='Do not write dns info')
     parser.add_argument(
@@ -1431,6 +1436,8 @@ def main(argv=None):
 
     log.debug("Starting glean")
     log.debug("Detected distro : %s" % args.distro)
+    log.debug("Configuring %s NetworkManager" %
+              "with" if args.use_nm else "without")
 
     with systemlock.Lock('/tmp/glean.lock'):
         if args.ssh:
