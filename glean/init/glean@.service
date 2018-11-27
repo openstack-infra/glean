@@ -4,8 +4,12 @@ DefaultDependencies=no
 Before=network-pre.target
 Wants=network-pre.target
 
+# Red Hat
 ConditionPathExists=!/etc/sysconfig/network-scripts/ifcfg-%I
+# Suse
 ConditionPathExists=!/etc/sysconfig/network/ifcfg-%I
+# Debuntu
+ConditionPathExists=!/etc/network/interfaces.d/%I.cfg
 
 [Service]
 Type=oneshot
