@@ -31,6 +31,16 @@ from glean import systemlock
 from glean import utils
 from glean._vendor import distro
 
+try:
+    import configparser
+except ImportError:
+    import ConfigParser as configparser
+
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
+
 log = logging.getLogger("glean")
 
 
@@ -317,7 +327,7 @@ def write_redhat_interfaces(interfaces, sys_interfaces, args):
     return files_to_write
 
 
-def _write_networkd_interface(name, interfaces, files_struct=dict()):
+def _write_networkd_interface(name, interfaces, args, files_struct=dict()):
     vlans = []
     for interface in interfaces:
         iname = name
@@ -345,6 +355,15 @@ def _write_networkd_interface(name, interfaces, files_struct=dict()):
                 ('bond_mode' in interface)):
             if '[Network]' not in files_struct[network_file]:
                 files_struct[network_file]['[Network]'] = list()
+            if 'services' in interface:
+                for service in interface['services']:
+                    if service['type'] == 'dns':
+                        if not args.skip_dns:
+                            files_struct[network_file]['[Network]'].append(
+                                'DNS={address}'.format(
+                                    address=service['address']
+                                )
+                            )
         # dhcp network, set to yes if both dhcp6 and dhcp4 are set
         if interface['type'] == 'ipv4_dhcp':
             if 'DHCP=ipv6' in files_struct[network_file]['[Network]']:
@@ -497,7 +516,7 @@ def _write_networkd_interface(name, interfaces, files_struct=dict()):
     return files_struct
 
 
-def write_networkd_interfaces(interfaces, sys_interfaces):
+def write_networkd_interfaces(interfaces, sys_interfaces, args):
     files_to_write = dict()
     gen_intfs = {}
     files_struct = dict()
@@ -536,7 +555,7 @@ def write_networkd_interfaces(interfaces, sys_interfaces):
                 intf.get('link', intf['id']) for intf in interfs
                 if 'bond_mode' in intf)
         files_struct = _write_networkd_interface(
-            interface_name, interfs, files_struct)
+            interface_name, interfs, args, files_struct)
 
     for mac, iname in sorted(
             sys_interfaces.items(), key=lambda x: x[1]):
@@ -550,7 +569,7 @@ def write_networkd_interfaces(interfaces, sys_interfaces):
             continue
         interface = {'type': 'ipv4_dhcp', 'mac_address': mac}
         files_struct = _write_networkd_interface(
-            iname, [interface], files_struct)
+            iname, [interface], args, files_struct)
 
     for networkd_file in files_struct:
         file_contents = '# Automatically generated, do not edit\n'
@@ -923,10 +942,30 @@ def write_debian_interfaces(interfaces, sys_interfaces):
 
 
 def write_dns_info(dns_servers):
-    results = ""
+    resolve_confs = {}
+    resolv_nameservers = ""
     for server in dns_servers:
-        results += "nameserver {0}\n".format(server)
-    return {'/etc/resolv.conf': results}
+        resolv_nameservers += "nameserver {0}\n".format(server)
+    resolve_confs['/etc/resolv.conf'] = resolv_nameservers
+    # set up resolved if available
+    if os.path.isfile('/etc/systemd/resolved.conf'):
+        # read the existing config  so we only overwrite what's needed
+        resolved_conf = configparser.ConfigParser()
+        resolved_conf.read('/etc/systemd/resolved.conf')
+        # create config section if not created
+        if not resolved_conf.has_section('Resolve'):
+            resolved_conf.add_section('Resolve')
+        # write space separated dns servers
+        resolved_conf.set('Resolve', 'DNS', " ".join(dns_servers))
+        # use stringio to output the resulting config to string
+        # configparser only outputs to file descriptors
+        resolved_conf_fd = StringIO("")
+        resolved_conf.write(resolved_conf_fd)
+        resolved_conf_output = resolved_conf_fd.getvalue()
+        resolved_conf_fd.close()
+        # add the config to files to be written
+        resolve_confs['/etc/systemd/resolved.conf'] = resolved_conf_output
+    return resolve_confs
 
 
 def get_config_drive_interfaces(net):
@@ -1023,7 +1062,7 @@ def write_static_network_info(
         )
     elif args.distro in 'networkd':
         files_to_write.update(
-            write_networkd_interfaces(interfaces, sys_interfaces)
+            write_networkd_interfaces(interfaces, sys_interfaces, args)
         )
     else:
         return False

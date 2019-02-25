@@ -84,7 +84,7 @@ class TestGlean(base.BaseTestCase):
                      '/etc/conf.d', '/etc/init.d', '/etc/sysconfig/network',
                      '/etc/systemd/network')
         mock_files = ('/etc/resolv.conf', '/etc/hostname', '/etc/hosts',
-                      '/bin/systemctl')
+                      '/etc/systemd/resolved.conf', '/bin/systemctl')
         if (path.startswith(mock_dirs) or path in mock_files):
             try:
                 mock_handle = self.file_handle_mocks[path]
@@ -198,6 +198,9 @@ class TestGlean(base.BaseTestCase):
 
         output_filename = '%s.%s.network.out' % (provider, distro.lower())
         output_path = os.path.join(sample_data_path, 'test', output_filename)
+        if not skip_dns:
+            if os.path.exists(output_path + '.dns'):
+                output_path = output_path + '.dns'
 
         # Generate a list of (dest, content) into write_blocks to assert
         write_blocks = []
@@ -271,7 +274,8 @@ class TestGlean(base.BaseTestCase):
     # comes up with "--interface".  This simulates that.
     def test_glean_systemd(self):
         with mock.patch('glean.systemlock.Lock'):
-            self._assert_distro_provider(self.distro, self.style, 'eth0')
+            self._assert_distro_provider(self.distro, self.style,
+                                         'eth0', skip_dns=True)
 
     def test_glean_skip_dns(self):
         with mock.patch('glean.systemlock.Lock'):
