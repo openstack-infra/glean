@@ -1179,7 +1179,7 @@ def get_sys_interfaces(interface, args):
     log.debug("Probing system interfaces")
     sys_root = os.path.join(args.root, 'sys/class/net')
 
-    ignored_interfaces = ('sit', 'tunl', 'bonding_master', 'teql',
+    ignored_interfaces = ('sit', 'tunl', 'bonding_master', 'teql', 'wg',
                           'ip6gre', 'ip6_vti', 'ip6tnl', 'bond', 'lo')
     sys_interfaces = {}
     if interface is not None:
